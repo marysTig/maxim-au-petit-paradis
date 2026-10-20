@@ -235,8 +235,170 @@ body { font-family: var(--font-sans); }
 .kid-btn { box-shadow: 0 6px 0 color-mix(in oklab, currentColor 0%, oklch(0 0 0 / .18)), 0 12px 24px -8px oklch(0 0 0 / .25); transition: transform .15s; }
 .kid-btn:active { transform: translateY(3px); }
 
+/* --- Voile de ciel qui dérive lentement --- */
+.sky-wash {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(55% 42% at 30% 38%, oklch(0.9 0.09 200 / .5), transparent 70%),
+    radial-gradient(48% 38% at 72% 22%, oklch(0.92 0.08 265 / .45), transparent 70%),
+    radial-gradient(40% 34% at 55% 70%, oklch(0.95 0.06 150 / .35), transparent 70%);
+  animation: wash 26s ease-in-out infinite;
+}
+@keyframes wash {
+  0%, 100% { transform: translate3d(-4%, 0, 0) scale(1); }
+  50%      { transform: translate3d(5%, 3%, 0) scale(1.08); }
+}
+
+/* --- Rayons de soleil qui tournent --- */
+.sun-rays {
+  position: absolute;
+  border-radius: 9999px;
+  background: repeating-conic-gradient(from 0deg, oklch(0.95 0.13 85 / .5) 0deg 4deg, transparent 4deg 18deg);
+  -webkit-mask: radial-gradient(circle, oklch(0 0 0 / .95) 0 22%, transparent 68%);
+  mask: radial-gradient(circle, oklch(0 0 0 / .95) 0 22%, transparent 68%);
+  animation: sunspin 52s linear infinite;
+}
+@keyframes sunspin {
+  to { transform: rotate(360deg); }
+}
+
+/* --- Nuages qui traversent le ciel --- */
+.cloud {
+  position: absolute;
+  left: 0;
+  aspect-ratio: 100 / 40;
+  filter: blur(1px);
+  animation-name: drift;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes drift {
+  from { transform: translate3d(-45vw, 0, 0); }
+  to   { transform: translate3d(118vw, 0, 0); }
+}
+
+/* --- Ballons qui montent en se balançant --- */
+.balloon {
+  position: absolute;
+  bottom: -24%;
+  aspect-ratio: 24 / 36;
+  animation-name: balloon-up;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+.balloon-body {
+  display: block;
+  width: 100%;
+  height: 100%;
+  animation-name: balloon-sway;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+@keyframes balloon-up {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(0, -138vh, 0); }
+}
+@keyframes balloon-sway {
+  0%, 100% { transform: translate3d(-10px, 0, 0) rotate(-4deg); }
+  50%      { transform: translate3d(12px, 0, 0) rotate(4deg); }
+}
+
+/* --- Notes de musique qui s'envolent --- */
+.note {
+  position: absolute;
+  bottom: -8%;
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1;
+  animation-name: note-up;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+@keyframes note-up {
+  0%   { transform: translate3d(0, 0, 0) rotate(-10deg) scale(.7); opacity: 0; }
+  15%  { opacity: .85; }
+  75%  { opacity: .5; }
+  100% { transform: translate3d(30px, -55vh, 0) rotate(12deg) scale(1.05); opacity: 0; }
+}
+
+/* --- Pétales de confettis qui tombent --- */
+.petal {
+  position: absolute;
+  top: -10%;
+  width: 11px;
+  height: 15px;
+  border-radius: 62% 38% 55% 45%;
+  opacity: .75;
+  animation-name: petal-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes petal-fall {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 0; }
+  10%  { opacity: .8; }
+  90%  { opacity: .55; }
+  100% { transform: translate3d(46px, 122vh, 0) rotate(560deg); opacity: 0; }
+}
+
+/* --- Étoiles qui scintillent --- */
+.twinkle {
+  position: absolute;
+  background: currentColor;
+  clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+  animation-name: twinkle;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+@keyframes twinkle {
+  0%, 100% { transform: scale(.45) rotate(0deg); opacity: .2; }
+  50%      { transform: scale(1.15) rotate(90deg); opacity: .9; }
+}
+
+/* --- Papillons qui traversent le jardin --- */
+.butterfly {
+  position: absolute;
+  left: 0;
+  aspect-ratio: 24 / 20;
+  animation-name: flutter;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+.bfly-wing {
+  transform-box: fill-box;
+  transform-origin: 100% 50%;
+  animation: flap .38s ease-in-out infinite;
+}
+.bfly-right { transform-origin: 0% 50%; }
+@keyframes flap {
+  0%, 100% { transform: scaleX(1); }
+  50%      { transform: scaleX(.32); }
+}
+@keyframes flutter {
+  0%   { transform: translate3d(-18vw, 0, 0); }
+  25%  { transform: translate3d(18vw, -7vh, 0); }
+  50%  { transform: translate3d(56vw, 4vh, 0); }
+  75%  { transform: translate3d(88vw, -6vh, 0); }
+  100% { transform: translate3d(122vw, 0, 0); }
+}
+
+/* --- Fleurs qui se balancent sur les collines --- */
+.flower {
+  position: absolute;
+  transform-origin: 50% 100%;
+  animation-name: bloom;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+@keyframes bloom {
+  0%, 100% { transform: rotate(-8deg); }
+  50%      { transform: rotate(8deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .bokeh, .bulb, .cloud, .sun-glow, .sparkle, .hill-back, .hill-front {
+  .bokeh, .bulb, .cloud, .sun-glow, .sun-rays, .sparkle, .hill-back, .hill-front,
+  .sky-wash, .balloon, .balloon-body, .note, .petal, .twinkle,
+  .butterfly, .bfly-wing, .flower {
     animation: none !important;
   }
 }
