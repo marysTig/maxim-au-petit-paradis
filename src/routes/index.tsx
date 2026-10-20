@@ -51,7 +51,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function Index() {
-
   return (
     <div className="sky-bg relative min-h-screen overflow-hidden text-center">
       {/* Guirlande */}
