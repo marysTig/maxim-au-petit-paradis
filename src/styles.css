@@ -168,9 +168,97 @@ body { font-family: var(--font-sans); }
     radial-gradient(circle at 0% 0%, oklch(0.95 0.12 85 / 0.9), transparent 40%),
     linear-gradient(180deg, oklch(0.82 0.09 235), oklch(0.92 0.05 220) 60%, oklch(0.96 0.03 200));
 }
-.bokeh { position: absolute; border-radius: 9999px; filter: blur(8px); opacity: .55; animation: floaty 9s ease-in-out infinite; }
-@keyframes floaty { 50% { transform: translateY(-18px); } }
-.bulb { width: 14px; height: 20px; border-radius: 50% 50% 45% 45%; animation: glow 2.4s ease-in-out infinite; }
-@keyframes glow { 50% { opacity: .55; } }
+/* --- Bulles lumineuses : dérive + pulsation --- */
+.bokeh {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(8px);
+  animation: floaty 9s ease-in-out infinite;
+}
+@keyframes floaty {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: .45; }
+  50%      { transform: translate3d(14px, -26px, 0) scale(1.15); opacity: .8; }
+}
+
+/* --- Ampoules : scintillement + balancement --- */
+.bulb {
+  width: 14px;
+  height: 20px;
+  border-radius: 50% 50% 45% 45%;
+  transform-origin: 50% -8px;
+  animation: glow 2.4s ease-in-out infinite, sway 4.2s ease-in-out infinite;
+}
+@keyframes glow {
+  0%, 100% { opacity: 1; box-shadow: 0 0 12px 2px currentColor; }
+  50%      { opacity: .5; box-shadow: 0 0 4px 0 currentColor; }
+}
+@keyframes sway {
+  0%, 100% { transform: rotate(-6deg); }
+  50%      { transform: rotate(6deg); }
+}
+
+/* --- Nuages qui traversent le ciel --- */
+.cloud {
+  position: absolute;
+  background: var(--card);
+  border-radius: 9999px;
+  filter: blur(7px);
+  animation: drift linear infinite;
+}
+.cloud::before,
+.cloud::after {
+  content: "";
+  position: absolute;
+  background: var(--card);
+  border-radius: 9999px;
+}
+.cloud::before { width: 55%; height: 170%; left: 10%; top: -90%; }
+.cloud::after  { width: 38%; height: 130%; right: 12%; top: -60%; }
+@keyframes drift {
+  from { transform: translate3d(-25vw, 0, 0); }
+  to   { transform: translate3d(115vw, 0, 0); }
+}
+
+/* --- Lumière dorée qui respire --- */
+.sun-glow {
+  position: absolute;
+  border-radius: 9999px;
+  background: radial-gradient(circle, oklch(0.95 0.13 85 / .9), transparent 65%);
+  animation: breathe 8s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: .75; }
+  50%      { transform: scale(1.12); opacity: 1; }
+}
+
+/* --- Petites étoiles qui montent --- */
+.sparkle {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  animation: rise 7s ease-in-out infinite;
+}
+@keyframes rise {
+  0%   { transform: translate3d(0, 30px, 0) scale(.5); opacity: 0; }
+  15%  { opacity: .95; }
+  70%  { opacity: .7; }
+  100% { transform: translate3d(10px, -140px, 0) scale(1.1); opacity: 0; }
+}
+
+/* --- Collines qui respirent --- */
+.hill-back  { animation: hill 10s ease-in-out infinite; }
+.hill-front { animation: hill 13s ease-in-out infinite reverse; }
+@keyframes hill {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
 .kid-btn { box-shadow: 0 6px 0 color-mix(in oklab, currentColor 0%, oklch(0 0 0 / .18)), 0 12px 24px -8px oklch(0 0 0 / .25); transition: transform .15s; }
 .kid-btn:active { transform: translateY(3px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bokeh, .bulb, .cloud, .sun-glow, .sparkle, .hill-back, .hill-front {
+    animation: none !important;
+  }
+}
