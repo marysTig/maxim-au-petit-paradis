@@ -176,8 +176,8 @@ body { font-family: var(--font-sans); }
   animation: floaty 9s ease-in-out infinite;
 }
 @keyframes floaty {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: .45; }
-  50%      { transform: translate3d(14px, -26px, 0) scale(1.15); opacity: .8; }
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: .26; }
+  50%      { transform: translate3d(14px, -26px, 0) scale(1.15); opacity: .5; }
 }
 
 /* --- Ampoules : scintillement + balancement --- */
