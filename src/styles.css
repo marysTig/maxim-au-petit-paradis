@@ -294,6 +294,7 @@ body { font-family: var(--font-sans); }
   animation-name: balloon-sway;
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
+  animation-duration: 3.6s;
 }
 @keyframes balloon-up {
   from { transform: translate3d(0, 0, 0); }

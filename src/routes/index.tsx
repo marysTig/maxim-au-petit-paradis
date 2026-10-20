@@ -187,6 +187,13 @@ function Index() {
         {bokehs.map((b, i) => (
           <span key={i} className={`bokeh ${b.c}`} style={{ left: b.l, top: b.t, width: b.s, height: b.s, animationDelay: `${i}s` }} />
         ))}
+        {sparkles.map((s, i) => (
+          <span
+            key={i}
+            className={`sparkle ${s.c}`}
+            style={{ left: s.l, top: s.t, animationDelay: `${i * 1.4}s`, animationDuration: `${6 + i}s` }}
+          />
+        ))}
         {balloons.map((b, i) => (
           <Balloon key={i} className={b.c} style={{ left: b.l, width: b.w, animationDuration: `${b.d}s`, animationDelay: b.delay }} />
         ))}
