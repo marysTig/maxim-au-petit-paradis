@@ -127,7 +127,7 @@ function Balloon({ className, style }: { className?: string; style?: React.CSSPr
       <span className="balloon-body">
         <svg viewBox="0 0 24 36" className="h-full w-full" aria-hidden="true">
           <ellipse cx="12" cy="11" rx="9" ry="11" fill="currentColor" />
-          <ellipse cx="9" cy="7" rx="3" ry="4" fill="card" opacity=".45" />
+          <ellipse cx="9" cy="7" rx="3" ry="4" className="fill-card" opacity=".45" />
           <path d="M12 22l2.4 3.4H9.6z" fill="currentColor" />
           <path d="M12 25.4c3 3 0 5 0 8" fill="none" stroke="currentColor" strokeWidth=".7" opacity=".55" />
         </svg>

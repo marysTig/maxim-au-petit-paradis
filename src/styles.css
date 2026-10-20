@@ -172,7 +172,7 @@ body { font-family: var(--font-sans); }
 .bokeh {
   position: absolute;
   border-radius: 9999px;
-  filter: blur(8px);
+  filter: blur(10px);
   animation: floaty 9s ease-in-out infinite;
 }
 @keyframes floaty {
