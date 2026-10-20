@@ -21,11 +21,27 @@ const PHONES = ["0555 00 00 01", "0555 00 00 02"];
 const WHATSAPP = ["0555 00 00 03", "0555 00 00 04"];
 const toIntl = (n: string) => "213" + n.replace(/\D/g, "").replace(/^0/, "");
 
-const bulbColors = ["bg-kid-blue", "bg-kid-violet", "bg-kid-green", "bg-kid-pink", "bg-kid-orange"];
+const bulbColors = [
+  "bg-kid-blue text-kid-blue", "bg-kid-violet text-kid-violet", "bg-kid-green text-kid-green",
+  "bg-kid-pink text-kid-pink", "bg-kid-orange text-kid-orange",
+];
 const bokehs = [
   { l: "8%", t: "20%", s: 60, c: "bg-kid-pink" }, { l: "80%", t: "15%", s: 90, c: "bg-kid-orange" },
   { l: "70%", t: "45%", s: 50, c: "bg-kid-violet" }, { l: "5%", t: "60%", s: 80, c: "bg-kid-blue" },
   { l: "85%", t: "75%", s: 40, c: "bg-kid-green" }, { l: "30%", t: "35%", s: 30, c: "bg-card" },
+];
+const clouds = [
+  { t: "14%", w: 150, h: 34, o: 0.55, d: "46s", delay: "-8s" },
+  { t: "31%", w: 110, h: 26, o: 0.4, d: "62s", delay: "-30s" },
+  { t: "52%", w: 190, h: 42, o: 0.3, d: "78s", delay: "-52s" },
+  { t: "70%", w: 120, h: 28, o: 0.35, d: "54s", delay: "-16s" },
+];
+const sparkles = [
+  { l: "14%", t: "72%", c: "bg-kid-orange text-kid-orange" },
+  { l: "86%", t: "62%", c: "bg-kid-pink text-kid-pink" },
+  { l: "44%", t: "84%", c: "bg-kid-blue text-kid-blue" },
+  { l: "68%", t: "78%", c: "bg-kid-green text-kid-green" },
+  { l: "26%", t: "56%", c: "bg-kid-violet text-kid-violet" },
 ];
 
 function LinkBtn({ href, color, icon, label, external }: { href: string; color: string; icon: React.ReactNode; label: string; external?: boolean }) {
@@ -62,12 +78,29 @@ function Index() {
           <span key={i} className={`bulb ${bulbColors[i % 5]}`} style={{ marginTop: `${Math.abs(Math.sin(i * 0.6)) * 28}px`, animationDelay: `${i * 0.2}s` }} />
         ))}
       </div>
+      <span className="sun-glow -left-24 -top-24 h-80 w-80" />
+      {clouds.map((c, i) => (
+        <span
+          key={i}
+          className="cloud"
+          style={{ top: c.t, left: 0, width: c.w, height: c.h, opacity: c.o, animationDuration: c.d, animationDelay: c.delay }}
+        />
+      ))}
       {bokehs.map((b, i) => (
         <span key={i} className={`bokeh ${b.c}`} style={{ left: b.l, top: b.t, width: b.s, height: b.s, animationDelay: `${i}s` }} />
       ))}
+      {sparkles.map((s, i) => (
+        <span
+          key={i}
+          className={`sparkle ${s.c}`}
+          style={{ left: s.l, top: s.t, animationDelay: `${i * 1.4}s`, animationDuration: `${6 + i}s` }}
+        />
+      ))}
       {/* Collines */}
-      <svg className="absolute inset-x-0 bottom-0 h-40 w-full" preserveAspectRatio="none" viewBox="0 0 100 30">
+      <svg className="hill-back absolute inset-x-0 bottom-0 h-40 w-full" preserveAspectRatio="none" viewBox="0 0 100 30">
         <path d="M0 18 Q20 6 45 16 T100 12 V30 H0Z" className="fill-kid-green/60" />
+      </svg>
+      <svg className="hill-front absolute inset-x-0 bottom-0 h-40 w-full" preserveAspectRatio="none" viewBox="0 0 100 30">
         <path d="M0 24 Q30 14 60 22 T100 20 V30 H0Z" className="fill-kid-green" />
       </svg>
 
