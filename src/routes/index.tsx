@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Phone, MessageCircle, Facebook, Music2 } from "lucide-react";
+import { Phone, MessageCircle, Facebook, Music2, Mail } from "lucide-react";
+import { getSavedLogoUrl } from "@/lib/cloudinary";
 import logo from "@/assets/logo-maxim.jpeg.asset.json";
 
 export const Route = createFileRoute("/")({
@@ -17,8 +18,8 @@ export const Route = createFileRoute("/")({
 });
 
 // Numéros à remplacer par les vrais (format local algérien)
-const PHONES = ["0555 00 00 01", "0555 00 00 02"];
-const WHATSAPP = ["0555 00 00 03", "0555 00 00 04"];
+const PHONES = ["0770896870", "0773678871"];
+const WHATSAPP = ["0770896870", "0773678871"];
 const toIntl = (n: string) => "213" + n.replace(/\D/g, "").replace(/^0/, "");
 
 const bulbColors = [
@@ -169,6 +170,7 @@ function Flower({ className, style }: { className?: string; style?: React.CSSPro
 }
 
 function Index() {
+  const logoUrl = getSavedLogoUrl() ?? logo.url;
   return (
     <div className="sky-bg relative min-h-screen overflow-hidden text-center">
       {/* Fond animé : calé sur la fenêtre pour rester visible partout */}
@@ -242,7 +244,7 @@ function Index() {
       ))}
 
       <main className="relative z-10 mx-auto flex max-w-md flex-col gap-8 px-5 pb-28 pt-16">
-        <img src={logo.url} alt="Logo Maxim au Petit Paradis" className="mx-auto w-full max-w-xs rounded-[2rem] border-4 border-card shadow-xl" />
+        <img src={logoUrl} alt="Logo Maxim au Petit Paradis" className="mx-auto w-full max-w-xs rounded-[2rem] border-4 border-card shadow-xl" />
         <p className="font-display text-lg font-medium text-foreground">
           Bienvenue à la crèche ! Appelez-nous, écrivez-nous ou suivez nos aventures.
         </p>
@@ -262,6 +264,7 @@ function Index() {
         <Section title="Nous suivre">
           <LinkBtn external href="https://www.tiktok.com/@crche.maxim?_r=1&_t=ZS-9AhP45qkZFs" color="bg-kid-pink" icon={<Music2 className="size-5" />} label="TikTok" />
           <LinkBtn external href="https://www.facebook.com/share/1CbWm954Qr/" color="bg-kid-orange" icon={<Facebook className="size-5" />} label="Facebook" />
+          <LinkBtn external href="mailto:maximecole06@gmail.com" color="bg-kid-blue" icon={<Mail className="size-5" />} label="maximecole06@gmail.com" />
         </Section>
 
       </main>
