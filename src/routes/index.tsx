@@ -1,6 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { QRCodeSVG } from "qrcode.react";
 import { Phone, MessageCircle, Facebook, Music2 } from "lucide-react";
 import logo from "@/assets/logo-maxim.jpeg.asset.json";
 
@@ -53,9 +51,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function Index() {
-  const [url, setUrl] = useState("");
-  useEffect(() => setUrl(window.location.href), []);
-
   return (
     <div className="sky-bg relative min-h-screen overflow-hidden text-center">
       {/* Guirlande */}
@@ -76,7 +71,7 @@ function Index() {
         <path d="M0 24 Q30 14 60 22 T100 20 V30 H0Z" className="fill-kid-green" />
       </svg>
 
-      <main className="relative mx-auto flex max-w-md flex-col gap-8 px-5 pb-48 pt-16">
+      <main className="relative mx-auto flex max-w-md flex-col gap-8 px-5 pb-28 pt-16">
         <img src={logo.url} alt="Logo Maxim au Petit Paradis" className="mx-auto w-full max-w-xs rounded-[2rem] border-4 border-card shadow-xl" />
         <p className="font-display text-lg font-medium text-foreground">
           Bienvenue à la crèche ! Appelez-nous, écrivez-nous ou suivez nos aventures.
@@ -99,13 +94,6 @@ function Index() {
           <LinkBtn external href="https://www.facebook.com/share/1CbWm954Qr/" color="bg-kid-orange" icon={<Facebook className="size-5" />} label="Facebook" />
         </Section>
 
-        <section className="mx-auto space-y-3 rounded-[2rem] bg-card/90 p-6 shadow-xl">
-          <h2 className="font-display text-xl font-bold text-kid-blue">Partagez notre page</h2>
-          <div className="mx-auto w-fit rounded-2xl bg-card p-3">
-            {url && <QRCodeSVG value={url} size={180} fgColor="#8E3FC4" />}
-          </div>
-          <p className="text-sm text-muted-foreground">Scannez pour retrouver tous nos liens</p>
-        </section>
       </main>
     </div>
   );
