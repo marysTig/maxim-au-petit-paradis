@@ -1,5 +1,31 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Phone, MessageCircle, Facebook, Music2, Mail } from "lucide-react";
+// Brand SVG icons (inline)
+const IconPhone = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="size-5" aria-hidden="true">
+    <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C10.61 21 3 13.39 3 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.24 1.01l-2.21 2.21z"/>
+  </svg>
+);
+const IconWhatsApp = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="size-5" aria-hidden="true">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+    <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.532 5.848L0 24l6.334-1.51A11.934 11.934 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.794 9.794 0 01-4.98-1.364l-.358-.212-3.758.896.952-3.656-.234-.374A9.793 9.793 0 012.182 12c0-5.422 4.396-9.818 9.818-9.818 5.422 0 9.818 4.396 9.818 9.818 0 5.422-4.396 9.818-9.818 9.818z"/>
+  </svg>
+);
+const IconTikTok = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="size-5" aria-hidden="true">
+    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.74a4.85 4.85 0 01-1.01-.05z"/>
+  </svg>
+);
+const IconFacebook = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="size-5" aria-hidden="true">
+    <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.884v2.25h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
+  </svg>
+);
+const IconGmail = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="size-5" aria-hidden="true">
+    <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 010 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L12 9.09l8.073-5.597C21.69 2.28 24 3.434 24 5.457z"/>
+  </svg>
+);
 import { getSavedLogoUrl } from "@/lib/cloudinary";
 import logo from "@/assets/logo-maxim.jpeg.asset.json";
 
@@ -251,20 +277,20 @@ function Index() {
 
         <Section title="Nous appeler">
           {PHONES.map((n, i) => (
-            <LinkBtn key={n} href={`tel:+${toIntl(n)}`} color={i ? "bg-kid-violet" : "bg-kid-blue"} icon={<Phone className="size-5" />} label={n} />
+            <LinkBtn key={n} href={`tel:+${toIntl(n)}`} color={i ? "bg-kid-violet" : "bg-kid-blue"} icon={<IconPhone />} label={n} />
           ))}
         </Section>
 
         <Section title="Nous écrire sur WhatsApp">
           {WHATSAPP.map((n) => (
-            <LinkBtn key={n} external href={`https://wa.me/${toIntl(n)}`} color="bg-kid-green" icon={<MessageCircle className="size-5" />} label={n} />
+            <LinkBtn key={n} external href={`https://wa.me/${toIntl(n)}`} color="bg-kid-green" icon={<IconWhatsApp />} label={n} />
           ))}
         </Section>
 
         <Section title="Nous suivre">
-          <LinkBtn external href="https://www.tiktok.com/@crche.maxim?_r=1&_t=ZS-9AhP45qkZFs" color="bg-kid-pink" icon={<Music2 className="size-5" />} label="TikTok" />
-          <LinkBtn external href="https://www.facebook.com/share/1CbWm954Qr/" color="bg-kid-orange" icon={<Facebook className="size-5" />} label="Facebook" />
-          <LinkBtn external href="mailto:maximecole06@gmail.com" color="bg-kid-blue" icon={<Mail className="size-5" />} label="maximecole06@gmail.com" />
+          <LinkBtn external href="https://www.tiktok.com/@crche.maxim?_r=1&_t=ZS-9AhP45qkZFs" color="bg-kid-pink" icon={<IconTikTok />} label="TikTok" />
+          <LinkBtn external href="https://www.facebook.com/share/1CbWm954Qr/" color="bg-kid-orange" icon={<IconFacebook />} label="Facebook" />
+          <LinkBtn external href="mailto:maximecole06@gmail.com" color="bg-kid-blue" icon={<IconGmail />} label="maximecole06@gmail.com" />
         </Section>
 
       </main>
