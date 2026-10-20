@@ -71,7 +71,7 @@ function Index() {
         <path d="M0 24 Q30 14 60 22 T100 20 V30 H0Z" className="fill-kid-green" />
       </svg>
 
-      <main className="relative mx-auto flex max-w-md flex-col gap-8 px-5 pb-48 pt-16">
+      <main className="relative mx-auto flex max-w-md flex-col gap-8 px-5 pb-28 pt-16">
         <img src={logo.url} alt="Logo Maxim au Petit Paradis" className="mx-auto w-full max-w-xs rounded-[2rem] border-4 border-card shadow-xl" />
         <p className="font-display text-lg font-medium text-foreground">
           Bienvenue à la crèche ! Appelez-nous, écrivez-nous ou suivez nos aventures.
