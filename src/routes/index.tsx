@@ -1,6 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { QRCodeSVG } from "qrcode.react";
 import { Phone, MessageCircle, Facebook, Music2 } from "lucide-react";
 import logo from "@/assets/logo-maxim.jpeg.asset.json";
 
@@ -53,8 +51,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function Index() {
-  const [url, setUrl] = useState("");
-  useEffect(() => setUrl(window.location.href), []);
 
   return (
     <div className="sky-bg relative min-h-screen overflow-hidden text-center">
@@ -99,13 +95,6 @@ function Index() {
           <LinkBtn external href="https://www.facebook.com/share/1CbWm954Qr/" color="bg-kid-orange" icon={<Facebook className="size-5" />} label="Facebook" />
         </Section>
 
-        <section className="mx-auto space-y-3 rounded-[2rem] bg-card/90 p-6 shadow-xl">
-          <h2 className="font-display text-xl font-bold text-kid-blue">Partagez notre page</h2>
-          <div className="mx-auto w-fit rounded-2xl bg-card p-3">
-            {url && <QRCodeSVG value={url} size={180} fgColor="#8E3FC4" />}
-          </div>
-          <p className="text-sm text-muted-foreground">Scannez pour retrouver tous nos liens</p>
-        </section>
       </main>
     </div>
   );
