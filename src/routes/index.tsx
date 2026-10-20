@@ -1,24 +1,112 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
+import { Phone, MessageCircle, Facebook, Music2 } from "lucide-react";
+import logo from "@/assets/logo-maxim.jpeg.asset.json";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Maxim au Petit Paradis — Appelez, écrivez, suivez-nous" },
+      { name: "description", content: "Tous les liens de la crèche Maxim au Petit Paradis : téléphone, WhatsApp, TikTok et Facebook." },
+      { property: "og:title", content: "Maxim au Petit Paradis — Crèche" },
+      { property: "og:description", content: "Appelez-nous, écrivez-nous ou suivez nos aventures." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+// Numéros à remplacer par les vrais (format local algérien)
+const PHONES = ["0555 00 00 01", "0555 00 00 02"];
+const WHATSAPP = ["0555 00 00 03", "0555 00 00 04"];
+const toIntl = (n: string) => "213" + n.replace(/\D/g, "").replace(/^0/, "");
+
+const bulbColors = ["bg-kid-blue", "bg-kid-violet", "bg-kid-green", "bg-kid-pink", "bg-kid-orange"];
+const bokehs = [
+  { l: "8%", t: "20%", s: 60, c: "bg-kid-pink" }, { l: "80%", t: "15%", s: 90, c: "bg-kid-orange" },
+  { l: "70%", t: "45%", s: 50, c: "bg-kid-violet" }, { l: "5%", t: "60%", s: 80, c: "bg-kid-blue" },
+  { l: "85%", t: "75%", s: 40, c: "bg-kid-green" }, { l: "30%", t: "35%", s: 30, c: "bg-card" },
+];
+
+function LinkBtn({ href, color, icon, label, external }: { href: string; color: string; icon: React.ReactNode; label: string; external?: boolean }) {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
+    <a
+      href={href}
+      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+      className={`kid-btn flex items-center justify-center gap-3 rounded-full px-6 py-4 font-display text-lg font-semibold text-primary-foreground ${color}`}
     >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+      {icon}
+      <span>{label}</span>
+    </a>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-3">
+      <h2 className="font-display text-xl font-bold text-kid-violet">{title}</h2>
+      <div className="grid gap-3">{children}</div>
+    </section>
+  );
+}
+
+function Index() {
+  const [url, setUrl] = useState("");
+  useEffect(() => setUrl(window.location.href), []);
+
+  return (
+    <div className="sky-bg relative min-h-screen overflow-hidden text-center">
+      {/* Guirlande */}
+      <svg className="absolute inset-x-0 top-0 h-16 w-full" preserveAspectRatio="none" viewBox="0 0 100 20">
+        <path d="M0 2 Q25 16 50 6 T100 4" className="stroke-foreground/40" fill="none" strokeWidth="0.3" />
+      </svg>
+      <div className="absolute inset-x-0 top-2 flex justify-around px-2">
+        {Array.from({ length: 12 }).map((_, i) => (
+          <span key={i} className={`bulb ${bulbColors[i % 5]}`} style={{ marginTop: `${Math.abs(Math.sin(i * 0.6)) * 28}px`, animationDelay: `${i * 0.2}s` }} />
+        ))}
+      </div>
+      {bokehs.map((b, i) => (
+        <span key={i} className={`bokeh ${b.c}`} style={{ left: b.l, top: b.t, width: b.s, height: b.s, animationDelay: `${i}s` }} />
+      ))}
+      {/* Collines */}
+      <svg className="absolute inset-x-0 bottom-0 h-40 w-full" preserveAspectRatio="none" viewBox="0 0 100 30">
+        <path d="M0 18 Q20 6 45 16 T100 12 V30 H0Z" className="fill-kid-green/60" />
+        <path d="M0 24 Q30 14 60 22 T100 20 V30 H0Z" className="fill-kid-green" />
+      </svg>
+
+      <main className="relative mx-auto flex max-w-md flex-col gap-8 px-5 pb-48 pt-16">
+        <img src={logo.url} alt="Logo Maxim au Petit Paradis" className="mx-auto w-full max-w-xs rounded-[2rem] border-4 border-card shadow-xl" />
+        <p className="font-display text-lg font-medium text-foreground">
+          Bienvenue à la crèche ! Appelez-nous, écrivez-nous ou suivez nos aventures.
+        </p>
+
+        <Section title="Nous appeler">
+          {PHONES.map((n, i) => (
+            <LinkBtn key={n} href={`tel:+${toIntl(n)}`} color={i ? "bg-kid-violet" : "bg-kid-blue"} icon={<Phone className="size-5" />} label={n} />
+          ))}
+        </Section>
+
+        <Section title="Nous écrire sur WhatsApp">
+          {WHATSAPP.map((n) => (
+            <LinkBtn key={n} external href={`https://wa.me/${toIntl(n)}`} color="bg-kid-green" icon={<MessageCircle className="size-5" />} label={n} />
+          ))}
+        </Section>
+
+        <Section title="Nous suivre">
+          <LinkBtn external href="https://www.tiktok.com/@crche.maxim?_r=1&_t=ZS-9AhP45qkZFs" color="bg-kid-pink" icon={<Music2 className="size-5" />} label="TikTok" />
+          <LinkBtn external href="https://www.facebook.com/share/1CbWm954Qr/" color="bg-kid-orange" icon={<Facebook className="size-5" />} label="Facebook" />
+        </Section>
+
+        <section className="mx-auto space-y-3 rounded-[2rem] bg-card/90 p-6 shadow-xl">
+          <h2 className="font-display text-xl font-bold text-kid-blue">Partagez notre page</h2>
+          <div className="mx-auto w-fit rounded-2xl bg-card p-3">
+            {url && <QRCodeSVG value={url} size={180} fgColor="#8E3FC4" />}
+          </div>
+          <p className="text-sm text-muted-foreground">Scannez pour retrouver tous nos liens</p>
+        </section>
+      </main>
     </div>
   );
 }
