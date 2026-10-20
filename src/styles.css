@@ -197,28 +197,6 @@ body { font-family: var(--font-sans); }
   50%      { transform: rotate(6deg); }
 }
 
-/* --- Nuages qui traversent le ciel --- */
-.cloud {
-  position: absolute;
-  background: var(--card);
-  border-radius: 9999px;
-  filter: blur(7px);
-  animation: drift linear infinite;
-}
-.cloud::before,
-.cloud::after {
-  content: "";
-  position: absolute;
-  background: var(--card);
-  border-radius: 9999px;
-}
-.cloud::before { width: 55%; height: 170%; left: 10%; top: -90%; }
-.cloud::after  { width: 38%; height: 130%; right: 12%; top: -60%; }
-@keyframes drift {
-  from { transform: translate3d(-25vw, 0, 0); }
-  to   { transform: translate3d(115vw, 0, 0); }
-}
-
 /* --- Lumière dorée qui respire --- */
 .sun-glow {
   position: absolute;

@@ -30,12 +30,6 @@ const bokehs = [
   { l: "70%", t: "45%", s: 50, c: "bg-kid-violet" }, { l: "5%", t: "60%", s: 80, c: "bg-kid-blue" },
   { l: "85%", t: "75%", s: 40, c: "bg-kid-green" }, { l: "30%", t: "35%", s: 30, c: "bg-card" },
 ];
-const clouds = [
-  { t: "14%", w: 150, h: 34, o: 0.55, d: "46s", delay: "-8s" },
-  { t: "31%", w: 110, h: 26, o: 0.4, d: "62s", delay: "-30s" },
-  { t: "52%", w: 190, h: 42, o: 0.3, d: "78s", delay: "-52s" },
-  { t: "70%", w: 120, h: 28, o: 0.35, d: "54s", delay: "-16s" },
-];
 const sparkles = [
   { l: "14%", t: "72%", c: "bg-kid-orange text-kid-orange" },
   { l: "86%", t: "62%", c: "bg-kid-pink text-kid-pink" },
@@ -79,13 +73,6 @@ function Index() {
         ))}
       </div>
       <span className="sun-glow -left-24 -top-24 h-80 w-80" />
-      {clouds.map((c, i) => (
-        <span
-          key={i}
-          className="cloud"
-          style={{ top: c.t, left: 0, width: c.w, height: c.h, opacity: c.o, animationDuration: c.d, animationDelay: c.delay }}
-        />
-      ))}
       {bokehs.map((b, i) => (
         <span key={i} className={`bokeh ${b.c}`} style={{ left: b.l, top: b.t, width: b.s, height: b.s, animationDelay: `${i}s` }} />
       ))}
