@@ -232,8 +232,94 @@ body { font-family: var(--font-sans); }
   50%      { transform: translateY(-8px); }
 }
 
-.kid-btn { box-shadow: 0 6px 0 color-mix(in oklab, currentColor 0%, oklch(0 0 0 / .18)), 0 12px 24px -8px oklch(0 0 0 / .25); transition: transform .15s; }
-.kid-btn:active { transform: translateY(3px); }
+/* ── Boutons 3D dégradé ── */
+.kid-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  border-radius: 9999px;
+  padding: 1.1rem 1.8rem;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 3px oklch(0 0 0 / .25);
+  letter-spacing: 0.03em;
+  border: none;
+  cursor: pointer;
+  outline: none;
+  /* ombre 3D épaisse */
+  box-shadow:
+    0 8px 0 oklch(0 0 0 / .22),
+    0 14px 28px -6px oklch(0 0 0 / .35),
+    inset 0 1px 0 oklch(1 0 0 / .35);
+  transition: transform .12s ease, box-shadow .12s ease;
+  overflow: hidden;
+}
+.kid-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, oklch(1 0 0 / .22) 0%, transparent 60%);
+  pointer-events: none;
+}
+.kid-btn:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 10px 0 oklch(0 0 0 / .22),
+    0 18px 32px -6px oklch(0 0 0 / .38),
+    inset 0 1px 0 oklch(1 0 0 / .35);
+}
+.kid-btn:active {
+  transform: translateY(5px);
+  box-shadow:
+    0 3px 0 oklch(0 0 0 / .22),
+    0 6px 12px -4px oklch(0 0 0 / .28),
+    inset 0 1px 0 oklch(1 0 0 / .35);
+}
+
+/* Dégradés par couleur */
+.kid-btn.bg-kid-blue   { background: linear-gradient(145deg, oklch(0.72 0.18 245), oklch(0.52 0.22 260)); }
+.kid-btn.bg-kid-violet { background: linear-gradient(145deg, oklch(0.60 0.22 310), oklch(0.42 0.24 295)); }
+.kid-btn.bg-kid-green  { background: linear-gradient(145deg, oklch(0.72 0.22 142), oklch(0.54 0.24 150)); }
+.kid-btn.bg-kid-pink   { background: linear-gradient(145deg, oklch(0.72 0.22 0),   oklch(0.54 0.24 350)); }
+.kid-btn.bg-kid-orange { background: linear-gradient(145deg, oklch(0.82 0.18 65),  oklch(0.65 0.22 45));  }
+
+/* ── Titres de section ── */
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, oklch(0.60 0.22 310), oklch(0.52 0.22 260));
+  padding: 0.4rem 1.1rem;
+  border-radius: 9999px;
+  box-shadow: 0 4px 0 oklch(0 0 0 / .18), 0 8px 18px -4px oklch(0 0 0 / .25);
+  text-shadow: 0 1px 3px oklch(0 0 0 / .2);
+  letter-spacing: 0.02em;
+}
+
+/* ── Carte de section ── */
+.section-card {
+  background: oklch(1 0 0 / .55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 2px solid oklch(1 0 0 / .7);
+  border-radius: 1.5rem;
+  padding: 1.25rem 1rem;
+  box-shadow: 0 4px 24px -6px oklch(0 0 0 / .15);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
 
 /* --- Voile de ciel qui dérive lentement --- */
 .sky-wash {

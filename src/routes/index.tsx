@@ -91,18 +91,20 @@ function LinkBtn({ href, color, icon, label, external }: { href: string; color: 
     <a
       href={href}
       {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-      className={`kid-btn flex items-center justify-center gap-3 rounded-full px-6 py-4 font-display text-lg font-semibold text-primary-foreground ${color}`}
+      className={`kid-btn ${color}`}
     >
-      {icon}
-      <span>{label}</span>
+      <span className="relative z-10 flex items-center gap-3">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/25">{icon}</span>
+        <span className="flex-1 text-left">{label}</span>
+      </span>
     </a>
   );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-3">
-      <h2 className="font-display text-xl font-bold text-kid-violet">{title}</h2>
+    <section className="section-card">
+      <h2 className="section-title">{title}</h2>
       <div className="grid gap-3">{children}</div>
     </section>
   );
