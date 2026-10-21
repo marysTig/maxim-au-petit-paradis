@@ -624,24 +624,26 @@ function ChildrenSection({
 
       {/* Children list */}
       {filtered.length === 0 ? (
-        <EmptyState icon="👶" text="Aucun enfant enregistré. Cliquez sur « Ajouter » pour commencer." />
+        <EmptyState icon="👶" text="Aucun enfant enregistré. Cliquez sur « Ajouter » pour commencer." />
       ) : (
         <div style={{ ...card, padding: "0", overflow: "hidden" }}>
-          {/* Table header */}
+          {/* Table header — must match row gridTemplateColumns exactly */}
           <div
+            className="children-table-header"
             style={{
               display: "grid",
-              gridTemplateColumns: "2fr 1fr 1fr 1fr auto",
+              gridTemplateColumns: "2fr 0.7fr 1fr 1.2fr 1.6fr auto",
+              columnGap: "0.75rem",
               padding: "0.65rem 1.25rem",
               background: "linear-gradient(135deg, oklch(0.60 0.22 310 / .12), oklch(0.52 0.22 260 / .12))",
               borderBottom: "1.5px solid oklch(0.85 0.05 265 / .5)",
-              gap: "0.5rem",
             }}
           >
-            {["Nom & naissance", "Âge", "Section", "Allergies", ""].map((h) => (
+            {["Nom & naissance", "Âge", "Section", "Allergies", "Note", ""].map((h) => (
               <div
                 key={h}
                 style={{
+                  minWidth: 0,
                   fontSize: "0.72rem",
                   fontWeight: 700,
                   color: "oklch(0.45 0.10 270)",
@@ -671,23 +673,24 @@ function ChildrenSection({
                 onMouseEnter={(e) => (e.currentTarget.style.background = "oklch(0.94 0.04 265 / .5)")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = idx % 2 === 0 ? "transparent" : "oklch(0.97 0.02 265 / .3)")}
               >
-                {/* Ligne principale */}
+                {/* Main row — same grid as header */}
                 <div
+                  className="children-table-row"
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "2fr 1fr 1fr 1fr auto",
-                    alignItems: "start",
-                    padding: "0.8rem 1.25rem 0.4rem",
-                    gap: "0.5rem",
+                    gridTemplateColumns: "2fr 0.7fr 1fr 1.2fr 1.6fr auto",
+                    columnGap: "0.75rem",
+                    alignItems: "center",
+                    padding: "0.75rem 1.25rem 0.5rem",
                   }}
                 >
                   {/* Nom + Date naissance */}
-                  <div>
-                    <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.97rem", color: "oklch(0.25 0.08 270)" }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.95rem", color: "oklch(0.25 0.08 270)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {child.firstName} {child.lastName}
                     </div>
                     {child.birthDate && (
-                      <div style={{ fontSize: "0.74rem", color: "oklch(0.55 0.06 260)", marginTop: "0.15rem" }}>
+                      <div style={{ fontSize: "0.73rem", color: "oklch(0.55 0.06 260)", marginTop: "0.1rem", whiteSpace: "nowrap" }}>
                         📅 Né{child.firstName.endsWith("a") ? "e" : ""} le{" "}
                         {new Date(child.birthDate).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
                       </div>
@@ -695,22 +698,34 @@ function ChildrenSection({
                   </div>
 
                   {/* Âge */}
-                  <div style={{ fontSize: "0.9rem", color: "oklch(0.38 0.08 270)", fontWeight: 700 }}>
-                    {age !== null ? <>{age} <span style={{ fontWeight: 500, fontSize: "0.8rem" }}>an{age > 1 ? "s" : ""}</span></> : "—"}
+                  <div style={{ minWidth: 0, fontSize: "0.9rem", color: "oklch(0.38 0.08 270)", fontWeight: 700 }}>
+                    {age !== null ? <>{age}<span style={{ fontWeight: 500, fontSize: "0.78rem", marginLeft: "0.15rem" }}>an{age > 1 ? "s" : ""}</span></> : "—"}
                   </div>
 
                   {/* Section */}
-                  <div style={{ paddingTop: "0.1rem" }}>
+                  <div style={{ minWidth: 0 }}>
                     <span style={badge(sectionColors[child.section] ?? "oklch(0.55 0.15 260)")}>
                       {child.section}
                     </span>
                   </div>
 
                   {/* Allergies */}
-                  <div style={{ fontSize: "0.82rem", paddingTop: "0.05rem" }}>
+                  <div style={{ minWidth: 0, fontSize: "0.81rem", overflow: "hidden" }}>
                     {child.allergies ? (
-                      <span style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: "oklch(0.48 0.20 27)" }}>
-                        <AlertCircle size={13} />{child.allergies}
+                      <span title={child.allergies} style={{ display: "flex", alignItems: "center", gap: "0.25rem", color: "oklch(0.48 0.20 27)", overflow: "hidden" }}>
+                        <AlertCircle size={12} style={{ flexShrink: 0 }} />
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{child.allergies}</span>
+                      </span>
+                    ) : (
+                      <span style={{ color: "oklch(0.72 0.04 265)" }}>—</span>
+                    )}
+                  </div>
+
+                  {/* Note */}
+                  <div className="col-note" style={{ minWidth: 0, fontSize: "0.81rem", color: "oklch(0.42 0.08 265)", fontStyle: child.notes ? "italic" : "normal", overflow: "hidden" }}>
+                    {child.notes ? (
+                      <span title={child.notes} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
+                        📝 {child.notes}
                       </span>
                     ) : (
                       <span style={{ color: "oklch(0.72 0.04 265)" }}>—</span>
@@ -718,7 +733,7 @@ function ChildrenSection({
                   </div>
 
                   {/* Actions */}
-                  <div style={{ display: "flex", gap: "0.4rem" }}>
+                  <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
                     <button
                       onClick={() => onViewProfile(child)}
                       title="Voir la fiche"
@@ -750,29 +765,20 @@ function ChildrenSection({
                   </div>
                 </div>
 
-                {/* Ligne secondaire : parents + notes */}
-                {(linkedParents.length > 0 || child.notes) && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", padding: "0 1.25rem 0.8rem", alignItems: "center" }}>
-                    {linkedParents.length > 0 && (
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexWrap: "wrap" }}>
-                        <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "oklch(0.55 0.07 265)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Parents :</span>
-                        {linkedParents.map((p) => (
-                          <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.15rem 0.55rem", borderRadius: "9999px", background: "oklch(0.52 0.22 260 / .12)", border: "1px solid oklch(0.52 0.22 260 / .25)", fontSize: "0.78rem", fontWeight: 600, color: "oklch(0.35 0.12 265)" }}>
-                            👤 {p.name}
-                            {p.phone && (
-                              <a href={`tel:${p.phone}`} style={{ color: "oklch(0.50 0.20 142)", marginLeft: "0.2rem", display: "flex" }} title={`Appeler ${p.name}`}>
-                                <Phone size={11} />
-                              </a>
-                            )}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {child.notes && (
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", padding: "0.2rem 0.65rem", borderRadius: "0.5rem", background: "oklch(0.96 0.04 265 / .4)", border: "1px solid oklch(0.85 0.06 265 / .5)", fontSize: "0.8rem", color: "oklch(0.42 0.08 265)", fontStyle: "italic" }}>
-                        📝 {child.notes}
-                      </div>
-                    )}
+                {/* Ligne secondaire : parents rattachés */}
+                {linkedParents.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", padding: "0 1.25rem 0.7rem", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "oklch(0.55 0.07 265)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Parents :</span>
+                    {linkedParents.map((p) => (
+                      <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.15rem 0.55rem", borderRadius: "9999px", background: "oklch(0.52 0.22 260 / .12)", border: "1px solid oklch(0.52 0.22 260 / .25)", fontSize: "0.78rem", fontWeight: 600, color: "oklch(0.35 0.12 265)" }}>
+                        👤 {p.name}
+                        {p.phone && (
+                          <a href={`tel:${p.phone}`} style={{ color: "oklch(0.50 0.20 142)", marginLeft: "0.2rem", display: "flex" }} title={`Appeler ${p.name}`}>
+                            <Phone size={11} />
+                          </a>
+                        )}
+                      </span>
+                    ))}
                   </div>
                 )}
               </div>

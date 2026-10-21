@@ -489,3 +489,22 @@ body { font-family: var(--font-sans); }
     animation: none !important;
   }
 }
+
+/* ── Admin dashboard ─────────────────────────── */
+
+/* Children table: Note column — visible on desktop, hidden on mobile */
+.col-note {
+  display: block;
+}
+
+@media (max-width: 767px) {
+  .col-note {
+    display: none !important;
+  }
+
+  /* On mobile collapse the children table to 4 columns (no Note column) */
+  .children-table-header,
+  .children-table-row {
+    grid-template-columns: 2fr 0.7fr 1fr auto !important;
+  }
+}
