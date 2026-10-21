@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { AUTH_KEY } from "./accullie";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "../lib/supabase";
 import {
   Users,
   Baby,
@@ -82,21 +83,6 @@ export const Route = createFileRoute("/admin")({
   component: AdminDashboard,
 });
 
-/* ─────────────────────────────────────────────
-   LOCAL-STORAGE HELPERS
-───────────────────────────────────────────── */
-function load<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-function save<T>(key: string, value: T) {
-  localStorage.setItem(key, JSON.stringify(value));
-}
-
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
@@ -163,6 +149,93 @@ const badge = (color: string): React.CSSProperties => ({
 });
 
 /* ─────────────────────────────────────────────
+   SUPABASE ↔ APP MAPPERS
+───────────────────────────────────────────── */
+// DB (snake_case) → App (camelCase)
+function dbToChild(r: Record<string, unknown>): Child {
+  return {
+    id: r.id as string,
+    firstName: r.first_name as string,
+    lastName: r.last_name as string,
+    birthDate: (r.birth_date as string) ?? "",
+    section: r.section as string,
+    parentIds: (r.parent_ids as string[]) ?? [],
+    allergies: (r.allergies as string) ?? "",
+    notes: (r.notes as string) ?? "",
+  };
+}
+function childToDb(c: Child) {
+  return {
+    id: c.id,
+    first_name: c.firstName,
+    last_name: c.lastName,
+    birth_date: c.birthDate || null,
+    section: c.section,
+    parent_ids: c.parentIds,
+    allergies: c.allergies || null,
+    notes: c.notes || null,
+  };
+}
+
+function dbToParent(r: Record<string, unknown>): Parent {
+  return {
+    id: r.id as string,
+    name: r.name as string,
+    phone: (r.phone as string) ?? "",
+    email: (r.email as string) ?? "",
+    childIds: (r.child_ids as string[]) ?? [],
+  };
+}
+function parentToDb(p: Parent) {
+  return {
+    id: p.id,
+    name: p.name,
+    phone: p.phone || null,
+    email: p.email || null,
+    child_ids: p.childIds,
+  };
+}
+
+function dbToAttendance(r: Record<string, unknown>): AttendanceRecord {
+  return {
+    childId: r.child_id as string,
+    date: r.date as string,
+    arrival: (r.arrival as string | null) ?? null,
+    departure: (r.departure as string | null) ?? null,
+  };
+}
+function attendanceToDb(a: AttendanceRecord) {
+  return {
+    id: `${a.childId}_${a.date}`,
+    child_id: a.childId,
+    date: a.date,
+    arrival: a.arrival ?? null,
+    departure: a.departure ?? null,
+  };
+}
+
+function dbToPayment(r: Record<string, unknown>): Payment {
+  return {
+    id: r.id as string,
+    childId: r.child_id as string,
+    month: r.month as string,
+    amount: Number(r.amount),
+    status: r.status as Payment["status"],
+    paidAt: (r.paid_at as string | null) ?? null,
+  };
+}
+function paymentToDb(p: Payment) {
+  return {
+    id: p.id,
+    child_id: p.childId,
+    month: p.month,
+    amount: p.amount,
+    status: p.status,
+    paid_at: p.paidAt ?? null,
+  };
+}
+
+/* ─────────────────────────────────────────────
    MAIN DASHBOARD
 ───────────────────────────────────────────── */
 function AdminDashboard() {
@@ -170,27 +243,71 @@ function AdminDashboard() {
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // SSR-safe: always init with [] then load from localStorage on client mount
   const [children, setChildren] = useState<Child[]>([]);
   const [parents, setParents] = useState<Parent[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [dbError, setDbError] = useState<string | null>(null);
 
-  // Load from localStorage after hydration (client only)
-  useEffect(() => {
-    setChildren(load("db_children", []));
-    setParents(load("db_parents", []));
-    setAttendance(load("db_attendance", []));
-    setPayments(load("db_payments", []));
-    setLoaded(true);
+  /* ── Initial load from Supabase ── */
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    setDbError(null);
+    try {
+      const [c, p, a, pay] = await Promise.all([
+        supabase.from("children").select("*").order("created_at"),
+        supabase.from("parents").select("*").order("created_at"),
+        supabase.from("attendance").select("*"),
+        supabase.from("payments").select("*"),
+      ]);
+      if (c.error) throw c.error;
+      if (p.error) throw p.error;
+      if (a.error) throw a.error;
+      if (pay.error) throw pay.error;
+      setChildren((c.data ?? []).map(r => dbToChild(r as Record<string, unknown>)));
+      setParents((p.data ?? []).map(r => dbToParent(r as Record<string, unknown>)));
+      setAttendance((a.data ?? []).map(r => dbToAttendance(r as Record<string, unknown>)));
+      setPayments((pay.data ?? []).map(r => dbToPayment(r as Record<string, unknown>)));
+    } catch (err) {
+      console.error("Supabase load error:", err);
+      setDbError("Impossible de charger les données. Vérifiez votre connexion.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // Persist on change — only after initial load to avoid overwriting with []
-  useEffect(() => { if (loaded) save("db_children", children); }, [children, loaded]);
-  useEffect(() => { if (loaded) save("db_parents", parents); }, [parents, loaded]);
-  useEffect(() => { if (loaded) save("db_attendance", attendance); }, [attendance, loaded]);
-  useEffect(() => { if (loaded) save("db_payments", payments); }, [payments, loaded]);
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  /* ── Sync helpers (upsert / delete) ── */
+  async function upsertChild(child: Child) {
+    const { error } = await supabase.from("children").upsert(childToDb(child));
+    if (error) console.error("upsertChild:", error);
+  }
+  async function deleteChildDb(id: string) {
+    const { error } = await supabase.from("children").delete().eq("id", id);
+    if (error) console.error("deleteChild:", error);
+  }
+  async function upsertParent(parent: Parent) {
+    const { error } = await supabase.from("parents").upsert(parentToDb(parent));
+    if (error) console.error("upsertParent:", error);
+  }
+  async function deleteParentDb(id: string) {
+    const { error } = await supabase.from("parents").delete().eq("id", id);
+    if (error) console.error("deleteParent:", error);
+  }
+  async function upsertAttendance(rec: AttendanceRecord) {
+    const { error } = await supabase.from("attendance").upsert(attendanceToDb(rec), { onConflict: "child_id,date" });
+    if (error) console.error("upsertAttendance:", error);
+  }
+  async function upsertPayment(pay: Payment) {
+    const { error } = await supabase.from("payments").upsert(paymentToDb(pay));
+    if (error) console.error("upsertPayment:", error);
+  }
+  async function deletePaymentDb(id: string) {
+    const { error } = await supabase.from("payments").delete().eq("id", id);
+    if (error) console.error("deletePayment:", error);
+  }
 
   function logout() {
     sessionStorage.removeItem(AUTH_KEY);
@@ -416,17 +533,43 @@ function AdminDashboard() {
           <div style={{ width: "40px" }} />
         </div>
 
+        {/* Loading state */}
+        {loading && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", gap: "1rem" }}>
+            <div style={{ width: "48px", height: "48px", borderRadius: "50%", border: "4px solid oklch(0.85 0.08 260)", borderTopColor: "oklch(0.55 0.22 260)", animation: "spin 0.8s linear infinite" }} />
+            <p style={{ color: "oklch(0.45 0.10 260)", fontFamily: "var(--font-display)", fontWeight: 600 }}>Chargement…</p>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          </div>
+        )}
+
+        {/* Error state */}
+        {dbError && !loading && (
+          <div style={{ ...card, textAlign: "center", padding: "2.5rem", maxWidth: "480px", margin: "4rem auto" }}>
+            <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>⚠️</div>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.1rem", color: "oklch(0.45 0.18 27)", marginBottom: "0.5rem" }}>
+              Erreur de connexion Supabase
+            </div>
+            <p style={{ fontSize: "0.88rem", color: "oklch(0.55 0.07 260)", marginBottom: "1.25rem" }}>{dbError}</p>
+            <button onClick={fetchAll} style={{ padding: "0.6rem 1.5rem", borderRadius: "9999px", border: "none", background: "linear-gradient(135deg, oklch(0.60 0.22 310), oklch(0.52 0.22 260))", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
+              Réessayer
+            </button>
+          </div>
+        )}
+
         {/* Sections */}
-        {section === "children" && (
+        {!loading && !dbError && section === "children" && (
           <ChildrenSection
             children={children}
             setChildren={setChildren}
             parents={parents}
             setParents={setParents}
             onViewProfile={openProfile}
+            onChildAdded={upsertChild}
+            onChildRemoved={deleteChildDb}
+            onParentAdded={upsertParent}
           />
         )}
-        {section === "profile" && selectedChild && (
+        {!loading && !dbError && section === "profile" && selectedChild && (
           <ChildProfile
             child={selectedChild}
             parents={parents}
@@ -435,25 +578,30 @@ function AdminDashboard() {
             onBack={() => navTo("children")}
           />
         )}
-        {section === "attendance" && (
+        {!loading && !dbError && section === "attendance" && (
           <AttendanceSection
             children={children}
             attendance={attendance}
             setAttendance={setAttendance}
+            onAttendanceChange={upsertAttendance}
           />
         )}
-        {section === "payments" && (
+        {!loading && !dbError && section === "payments" && (
           <PaymentsSection
             children={children}
             payments={payments}
             setPayments={setPayments}
+            onPaymentUpsert={upsertPayment}
+            onPaymentDelete={deletePaymentDb}
           />
         )}
-        {section === "parents" && (
+        {!loading && !dbError && section === "parents" && (
           <ParentsSection
             parents={parents}
             setParents={setParents}
             children={children}
+            onParentAdded={upsertParent}
+            onParentRemoved={deleteParentDb}
           />
         )}
       </main>
@@ -600,12 +748,17 @@ function ChildrenSection({
   parents,
   setParents,
   onViewProfile,
+  onChildAdded,
+  onChildRemoved,
 }: {
   children: Child[];
   setChildren: React.Dispatch<React.SetStateAction<Child[]>>;
   parents: Parent[];
   setParents: React.Dispatch<React.SetStateAction<Parent[]>>;
   onViewProfile: (c: Child) => void;
+  onChildAdded: (c: Child) => void;
+  onChildRemoved: (id: string) => void;
+  onParentAdded?: (p: Parent) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<Omit<Child, "id">>({
@@ -623,6 +776,7 @@ function ChildrenSection({
     if (!form.firstName.trim() || !form.lastName.trim()) return;
     const newChild: Child = { id: uid(), ...form };
     setChildren((prev) => [...prev, newChild]);
+    onChildAdded(newChild);
     setForm({ firstName: "", lastName: "", birthDate: "", section: "Bébés", parentIds: [], allergies: "", notes: "" });
     setShowForm(false);
   }
@@ -633,6 +787,7 @@ function ChildrenSection({
     setParents((prev) =>
       prev.map((p) => ({ ...p, childIds: p.childIds.filter((cid) => cid !== id) }))
     );
+    onChildRemoved(id);
   }
 
   const filtered = children.filter((c) =>
@@ -1076,10 +1231,12 @@ function AttendanceSection({
   children,
   attendance,
   setAttendance,
+  onAttendanceChange,
 }: {
   children: Child[];
   attendance: AttendanceRecord[];
   setAttendance: React.Dispatch<React.SetStateAction<AttendanceRecord[]>>;
+  onAttendanceChange: (rec: AttendanceRecord) => void;
 }) {
   const today = todayStr();
 
@@ -1089,32 +1246,27 @@ function AttendanceSection({
 
   function markArrival(childId: string) {
     const existing = getRecord(childId);
+    const updated: AttendanceRecord = existing
+      ? { ...existing, arrival: nowStr() }
+      : { childId, date: today, arrival: nowStr(), departure: null };
     if (existing) {
       setAttendance((prev) =>
-        prev.map((a) =>
-          a.childId === childId && a.date === today
-            ? { ...a, arrival: nowStr() }
-            : a
-        )
+        prev.map((a) => a.childId === childId && a.date === today ? updated : a)
       );
     } else {
-      setAttendance((prev) => [
-        ...prev,
-        { childId, date: today, arrival: nowStr(), departure: null },
-      ]);
+      setAttendance((prev) => [...prev, updated]);
     }
+    onAttendanceChange(updated);
   }
 
   function markDeparture(childId: string) {
     const existing = getRecord(childId);
     if (!existing) return;
+    const updated = { ...existing, departure: nowStr() };
     setAttendance((prev) =>
-      prev.map((a) =>
-        a.childId === childId && a.date === today
-          ? { ...a, departure: nowStr() }
-          : a
-      )
+      prev.map((a) => a.childId === childId && a.date === today ? updated : a)
     );
+    onAttendanceChange(updated);
   }
 
   const dateLabel = new Date().toLocaleDateString("fr-FR", {
@@ -1271,10 +1423,14 @@ function PaymentsSection({
   children,
   payments,
   setPayments,
+  onPaymentUpsert,
+  onPaymentDelete,
 }: {
   children: Child[];
   payments: Payment[];
   setPayments: React.Dispatch<React.SetStateAction<Payment[]>>;
+  onPaymentUpsert: (p: Payment) => void;
+  onPaymentDelete: (id: string) => void;
 }) {
   const currentMonth = new Date().toISOString().slice(0, 7);
   const [quickForm, setQuickForm] = useState<{ childId: string; month: string; amount: number; status: Payment["status"] } | null>(null);
@@ -1304,37 +1460,36 @@ function PaymentsSection({
     if (!quickForm) return;
     const existing = getPaymentForMonth(quickForm.childId, quickForm.month);
     if (existing) {
-      setPayments((prev) =>
-        prev.map((p) =>
-          p.id === existing.id
-            ? { ...p, amount: quickForm.amount, status: quickForm.status, paidAt: quickForm.status === "paid" ? new Date().toLocaleDateString("fr-FR") : p.paidAt }
-            : p
-        )
-      );
+      const updated: Payment = { ...existing, amount: quickForm.amount, status: quickForm.status, paidAt: quickForm.status === "paid" ? new Date().toLocaleDateString("fr-FR") : existing.paidAt };
+      setPayments((prev) => prev.map((p) => p.id === existing.id ? updated : p));
+      onPaymentUpsert(updated);
     } else {
-      setPayments((prev) => [
-        ...prev,
-        {
-          id: uid(), childId: quickForm.childId, month: quickForm.month,
-          amount: quickForm.amount, status: quickForm.status,
-          paidAt: quickForm.status === "paid" ? new Date().toLocaleDateString("fr-FR") : null,
-        },
-      ]);
+      const newPay: Payment = {
+        id: uid(), childId: quickForm.childId, month: quickForm.month,
+        amount: quickForm.amount, status: quickForm.status,
+        paidAt: quickForm.status === "paid" ? new Date().toLocaleDateString("fr-FR") : null,
+      };
+      setPayments((prev) => [...prev, newPay]);
+      onPaymentUpsert(newPay);
     }
     setQuickForm(null);
   }
 
   function updateStatus(id: string, status: Payment["status"]) {
     setPayments((prev) =>
-      prev.map((p) =>
-        p.id === id ? { ...p, status, paidAt: status === "paid" ? new Date().toLocaleDateString("fr-FR") : p.paidAt } : p
-      )
+      prev.map((p) => {
+        if (p.id !== id) return p;
+        const updated = { ...p, status, paidAt: status === "paid" ? new Date().toLocaleDateString("fr-FR") : p.paidAt };
+        onPaymentUpsert(updated);
+        return updated;
+      })
     );
   }
 
   function removePayment(id: string) {
     if (!confirm("Supprimer ce paiement ?")) return;
     setPayments((prev) => prev.filter((p) => p.id !== id));
+    onPaymentDelete(id);
   }
 
 
@@ -1545,10 +1700,14 @@ function ParentsSection({
   parents,
   setParents,
   children,
+  onParentAdded,
+  onParentRemoved,
 }: {
   parents: Parent[];
   setParents: React.Dispatch<React.SetStateAction<Parent[]>>;
   children: Child[];
+  onParentAdded: (p: Parent) => void;
+  onParentRemoved: (id: string) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<Omit<Parent, "id">>({
@@ -1563,10 +1722,7 @@ function ParentsSection({
     if (!form.name.trim()) return;
     const newParent: Parent = { id: uid(), ...form };
     setParents((prev) => [...prev, newParent]);
-    // Link parent to selected children
-    form.childIds.forEach((cid) => {
-      // handled via childIds
-    });
+    onParentAdded(newParent);
     setForm({ name: "", phone: "", email: "", childIds: [] });
     setShowForm(false);
   }
@@ -1574,6 +1730,7 @@ function ParentsSection({
   function removeParent(id: string) {
     if (!confirm("Supprimer ce parent ?")) return;
     setParents((prev) => prev.filter((p) => p.id !== id));
+    onParentRemoved(id);
   }
 
   function toggleChildLink(parentId: string, childId: string) {
