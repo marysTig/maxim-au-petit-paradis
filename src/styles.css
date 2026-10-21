@@ -507,4 +507,21 @@ body { font-family: var(--font-sans); }
   .children-table-row {
     grid-template-columns: 2fr 0.7fr 1fr auto !important;
   }
+
+  /* Prevent iOS auto-zoom on inputs (needs font-size >= 16px) */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* Ensure all buttons have touch-friendly minimum size */
+  button {
+    min-height: 36px;
+    min-width: 36px;
+  }
+
+  /* Scrollable overflow for tables that don't reflow */
+  .children-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }

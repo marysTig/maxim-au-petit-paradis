@@ -458,18 +458,135 @@ function AdminDashboard() {
         )}
       </main>
 
-      {/* Responsive styles */}
+      {/* ── RESPONSIVE STYLES ── */}
       <style>{`
+        /* ── Desktop: sidebar always visible ── */
         @media (min-width: 768px) {
-          .admin-sidebar { transform: translateX(0) !important; position: sticky !important; height: 100vh !important; }
-          .admin-main    { margin-left: 0 !important; }
+          .admin-sidebar {
+            transform: translateX(0) !important;
+            position: sticky !important;
+            top: 0 !important;
+            height: 100vh !important;
+            flex-shrink: 0;
+          }
           .admin-topbar  { display: none !important; }
+          .admin-main    { padding: 1.5rem !important; }
+          .mobile-bottom-nav { display: none !important; }
         }
+
+        /* ── Phone: everything adapts ── */
         @media (max-width: 767px) {
+          /* Topbar */
           .admin-topbar { display: flex !important; }
-          .admin-main   { padding-top: 0 !important; }
+
+          /* Main content area */
+          .admin-main {
+            padding: 0.75rem 0.75rem 5rem !important;
+          }
+
+          /* Cards */
+          .admin-main [style*="border-radius: 1.5rem"],
+          .admin-main [style*="border-radius:1.5rem"] {
+            border-radius: 1rem !important;
+            padding: 1rem !important;
+          }
+
+          /* Page headers: wrap on small screens */
+          .admin-main [style*="display: flex"][style*="justify-content: space-between"] {
+            flex-wrap: wrap;
+            gap: 0.6rem;
+          }
+
+          /* Stat grids: 2 columns on phone instead of 3 */
+          .admin-main [style*="grid-template-columns: repeat(3, 1fr)"] {
+            grid-template-columns: 1fr 1fr !important;
+          }
+
+          /* Form grids: single column on phone */
+          .admin-main [style*="grid-template-columns: 1fr 1fr"] {
+            grid-template-columns: 1fr !important;
+          }
+          .admin-main [style*="grid-template-columns: repeat(2, 1fr)"] {
+            grid-template-columns: 1fr !important;
+          }
+          .admin-main [style*="grid-template-columns: 1fr 1fr 1fr"] {
+            grid-template-columns: 1fr !important;
+          }
+          .admin-main [style*="grid-template-columns: 1fr 1fr 1fr auto"] {
+            grid-template-columns: 1fr 1fr !important;
+          }
+
+          /* Children table: make scrollable */
+          .children-table-header,
+          .children-table-row {
+            grid-template-columns: 2fr 0.7fr 1fr auto !important;
+          }
+          .col-note { display: none !important; }
+
+          /* Payments table: stack */
+          .admin-main [style*="grid-template-columns: 2fr 1fr 1fr auto"] {
+            grid-template-columns: 1fr auto !important;
+          }
+
+          /* Attendance rows: stack buttons below name */
+          .admin-main [style*="align-items: center"][style*="justify-content: space-between"] {
+            flex-wrap: wrap;
+            gap: 0.5rem;
+          }
+
+          /* Sidebar overlay: full-width on very small phones */
+          .admin-sidebar { width: 240px !important; }
+
+          /* Bottom navigation bar */
+          .mobile-bottom-nav {
+            display: flex !important;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: oklch(0.22 0.06 270 / .97);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid oklch(1 0 0 / .12);
+            z-index: 50;
+            padding: 0.4rem 0;
+            justify-content: space-around;
+            align-items: center;
+          }
         }
       `}</style>
+
+      {/* ── MOBILE BOTTOM NAV ── */}
+      <nav className="mobile-bottom-nav" style={{ display: "none" }}>
+        {navItems.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => navTo(item.id)}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "0.2rem",
+              padding: "0.4rem 0.75rem",
+              borderRadius: "0.75rem",
+              border: "none",
+              cursor: "pointer",
+              background: section === item.id
+                ? "linear-gradient(135deg, oklch(0.60 0.22 310 / .3), oklch(0.52 0.22 260 / .3))"
+                : "transparent",
+              color: section === item.id ? "oklch(0.88 0.10 270)" : "oklch(0.65 0.07 260)",
+              minWidth: "60px",
+              transition: "background .18s, color .18s",
+            }}
+          >
+            {item.icon}
+            <span style={{ fontSize: "0.62rem", fontWeight: 600, fontFamily: "var(--font-sans)", letterSpacing: "0.02em" }}>
+              {item.label}
+            </span>
+          </button>
+        ))}
+      </nav>
+
     </div>
   );
 }
