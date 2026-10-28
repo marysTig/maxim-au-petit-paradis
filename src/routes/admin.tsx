@@ -20,7 +20,26 @@ import {
   CheckCircle2,
   Timer,
   Euro,
+  UserCog,
+  BarChart3,
+  UtensilsCrossed,
+  CalendarDays,
 } from "lucide-react";
+import {
+  dbToStaff,
+  staffToDb,
+  dbToStaffAttendance,
+  staffAttendanceToDb,
+  dbToMenu,
+  menuToDb,
+  dbToActivity,
+  activityToDb,
+} from "../lib/admin-extra";
+import type { Staff, StaffAttendance, MenuDay, Activity } from "../lib/admin-extra";
+import { StaffSection } from "../components/admin/StaffSection";
+import { ReportsSection } from "../components/admin/ReportsSection";
+import { MenusSection } from "../components/admin/MenusSection";
+import { ActivitiesSection } from "../components/admin/ActivitiesSection";
 import {
   uid,
   todayStr,
@@ -74,7 +93,16 @@ interface Payment {
   paidAt: string | null;
 }
 
-type Section = "children" | "profile" | "attendance" | "payments" | "parents";
+type Section =
+  | "children"
+  | "profile"
+  | "attendance"
+  | "payments"
+  | "parents"
+  | "staff"
+  | "reports"
+  | "menus"
+  | "activities";
 
 /* ─────────────────────────────────────────────
    ROUTE
@@ -200,6 +228,12 @@ function AdminDashboard() {
   const [dbError, setDbError] = useState<string | null>(null);
   const [writeError, setWriteError] = useState<string | null>(null);
 
+  const [staff, setStaff] = useState<Staff[]>([]);
+  const [staffAttendance, setStaffAttendance] = useState<StaffAttendance[]>([]);
+  const [menus, setMenus] = useState<MenuDay[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [extrasMissing, setExtrasMissing] = useState(false);
+
   /* ── Initial load from Supabase ── */
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -227,7 +261,31 @@ function AdminDashboard() {
     }
   }, []);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  /* ── Personnel / Menus / Activités: loaded separately so a missing table never blocks the admin ── */
+  const fetchExtras = useCallback(async () => {
+    try {
+      const [s, sa, m, a] = await Promise.all([
+        supabase.from("staff").select("*").order("created_at"),
+        supabase.from("staff_attendance").select("*"),
+        supabase.from("menus").select("*"),
+        supabase.from("activities").select("*").order("created_at"),
+      ]);
+      if (s.error) throw s.error;
+      if (sa.error) throw sa.error;
+      if (m.error) throw m.error;
+      if (a.error) throw a.error;
+      setStaff((s.data ?? []).map((r) => dbToStaff(r as Record<string, unknown>)));
+      setStaffAttendance((sa.data ?? []).map((r) => dbToStaffAttendance(r as Record<string, unknown>)));
+      setMenus((m.data ?? []).map((r) => dbToMenu(r as Record<string, unknown>)));
+      setActivities((a.data ?? []).map((r) => dbToActivity(r as Record<string, unknown>)));
+      setExtrasMissing(false);
+    } catch (err) {
+      console.error("Supabase extras load error:", err);
+      setExtrasMissing(true);
+    }
+  }, []);
+
+  useEffect(() => { fetchAll(); fetchExtras(); }, [fetchAll, fetchExtras]);
 
   /* ── Write errors surfaced to the user ── */
   function reportWrite(label: string, error: unknown) {
@@ -263,6 +321,33 @@ function AdminDashboard() {
   async function deletePaymentDb(id: string) {
     const { error } = await supabase.from("payments").delete().eq("id", id);
     if (error) reportWrite("suppression paiement", error);
+  }
+
+  async function upsertStaff(s: Staff) {
+    const { error } = await supabase.from("staff").upsert(staffToDb(s));
+    if (error) reportWrite("personnel", error);
+  }
+  async function deleteStaffDb(id: string) {
+    const { error } = await supabase.from("staff").delete().eq("id", id);
+    if (error) reportWrite("suppression personnel", error);
+  }
+  async function upsertStaffAttendance(rec: StaffAttendance) {
+    const { error } = await supabase
+      .from("staff_attendance")
+      .upsert(staffAttendanceToDb(rec), { onConflict: "staff_id,date" });
+    if (error) reportWrite("pointage personnel", error);
+  }
+  async function upsertMenu(m: MenuDay) {
+    const { error } = await supabase.from("menus").upsert(menuToDb(m), { onConflict: "week_start,day" });
+    if (error) reportWrite("menu", error);
+  }
+  async function upsertActivity(a: Activity) {
+    const { error } = await supabase.from("activities").upsert(activityToDb(a));
+    if (error) reportWrite("activité", error);
+  }
+  async function deleteActivityDb(id: string) {
+    const { error } = await supabase.from("activities").delete().eq("id", id);
+    if (error) reportWrite("suppression activité", error);
   }
 
   /* ── Parent ↔ child links: keep both sides in sync and persisted ── */
@@ -319,7 +404,31 @@ function AdminDashboard() {
     { id: "attendance", label: "Pointage", icon: <ClipboardCheck size={20} /> },
     { id: "payments", label: "Paiements", icon: <CreditCard size={20} /> },
     { id: "parents", label: "Parents", icon: <Users size={20} /> },
+    { id: "staff", label: "Personnel", icon: <UserCog size={20} /> },
+    { id: "reports", label: "Rapports", icon: <BarChart3 size={20} /> },
+    { id: "menus", label: "Menus", icon: <UtensilsCrossed size={20} /> },
+    { id: "activities", label: "Activités", icon: <CalendarDays size={20} /> },
   ];
+
+  const extrasNotice =
+    extrasMissing && (section === "staff" || section === "menus" || section === "activities") ? (
+      <div
+        role="status"
+        style={{
+          ...card,
+          padding: "0.75rem 1rem",
+          marginBottom: "1rem",
+          background: "oklch(0.96 0.05 85 / .85)",
+          borderColor: "oklch(0.85 0.10 85 / .7)",
+          color: "oklch(0.42 0.10 70)",
+          fontSize: "0.86rem",
+          fontWeight: 600,
+        }}
+      >
+        ℹ️ Les tables Personnel / Menus / Activités n'existent pas encore. Exécutez supabase_schema.sql dans
+        Supabase puis rechargez la page. Les données saisies ici ne seront pas enregistrées d'ici là.
+      </div>
+    ) : null;
 
   return (
     <div
@@ -442,10 +551,10 @@ function AdminDashboard() {
             ✅{" "}
             {
               attendance.filter(
-                (a) => a.date === todayStr() && a.arrival
+                (a) => a.date === todayStr() && a.arrival && !a.departure
               ).length
             }{" "}
-            présent{attendance.filter((a) => a.date === todayStr() && a.arrival).length > 1 ? "s" : ""} aujourd'hui
+            présent{attendance.filter((a) => a.date === todayStr() && a.arrival && !a.departure).length > 1 ? "s" : ""} aujourd'hui
           </div>
         </div>
 
@@ -597,6 +706,32 @@ function AdminDashboard() {
             onChildLinkChange={changeChildLink}
           />
         )}
+        {!loading && !dbError && extrasNotice}
+        {!loading && !dbError && section === "staff" && (
+          <StaffSection
+            staff={staff}
+            setStaff={setStaff}
+            staffAttendance={staffAttendance}
+            setStaffAttendance={setStaffAttendance}
+            onStaffUpsert={upsertStaff}
+            onStaffDelete={deleteStaffDb}
+            onAttendanceUpsert={upsertStaffAttendance}
+          />
+        )}
+        {!loading && !dbError && section === "reports" && (
+          <ReportsSection children={children} attendance={attendance} payments={payments} />
+        )}
+        {!loading && !dbError && section === "menus" && (
+          <MenusSection menus={menus} setMenus={setMenus} onMenuUpsert={upsertMenu} />
+        )}
+        {!loading && !dbError && section === "activities" && (
+          <ActivitiesSection
+            activities={activities}
+            setActivities={setActivities}
+            onActivityUpsert={upsertActivity}
+            onActivityDelete={deleteActivityDb}
+          />
+        )}
       </main>
 
       {/* ── RESPONSIVE STYLES ── */}
@@ -691,8 +826,9 @@ function AdminDashboard() {
             border-top: 1px solid oklch(1 0 0 / .12);
             z-index: 50;
             padding: 0.4rem 0;
-            justify-content: space-around;
+            justify-content: flex-start;
             align-items: center;
+            overflow-x: auto;
           }
         }
       `}</style>
