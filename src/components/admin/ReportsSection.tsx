@@ -51,6 +51,10 @@ export function ReportsSection({
 
   const ratePct = Math.round(report.attendanceRate * 100);
 
+  const sectionRows = SECTION_ORDER.map((s) => ({ name: s, count: report.sectionCounts[s] ?? 0 }));
+  const others = children.length - sectionRows.reduce((sum, r) => sum + r.count, 0);
+  if (others > 0) sectionRows.push({ name: "Non défini", count: others });
+
   const payCards: { key: PayStatus; label: string; icon: string; color: string }[] = [
     { key: "paid", label: "Payés", icon: "✅", color: "oklch(0.55 0.22 142)" },
     { key: "pending", label: "En attente", icon: "⏳", color: "oklch(0.60 0.18 70)" },
@@ -126,13 +130,12 @@ export function ReportsSection({
               👶 Enfants par section
             </div>
             <div style={{ display: "grid", gap: "0.5rem" }}>
-              {SECTION_ORDER.map((s) => {
-                const count = report.sectionCounts[s] ?? 0;
+              {sectionRows.map(({ name, count }) => {
                 const pct = children.length === 0 ? 0 : (count / children.length) * 100;
                 return (
-                  <div key={s}>
+                  <div key={name}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", fontWeight: 600, color: "oklch(0.40 0.10 270)" }}>
-                      <span>{s}</span>
+                      <span>{name}</span>
                       <span>{count}</span>
                     </div>
                     <div style={{ height: "8px", borderRadius: "9999px", background: "oklch(0.52 0.22 260 / .12)", overflow: "hidden" }}>
