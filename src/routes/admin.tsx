@@ -20,7 +20,28 @@ import {
   AlertCircle,
   Eye,
   Pencil,
+  UtensilsCrossed,
+  CalendarDays,
+  BarChart3,
 } from "lucide-react";
+import { EmptyState, ErrorBanner } from "../components/admin/ui";
+import { MenusSection } from "../components/admin/MenusSection";
+import { ActivitiesSection } from "../components/admin/ActivitiesSection";
+import { ReportsSection } from "../components/admin/ReportsSection";
+import { FinanceSection } from "../components/admin/FinanceSection";
+import { EspaceParentSection } from "../components/admin/EspaceParentSection";
+import {
+  activityToDb,
+  announcementToDb,
+  dbToActivity,
+  dbToAnnouncement,
+  dbToMenu,
+  menuToDb,
+  type Activity,
+  type Announcement,
+  type FinanceEntry,
+  type MenuDay,
+} from "../lib/admin-extra";
 
 /* ─────────────────────────────────────────────
    HELPERS
@@ -94,7 +115,17 @@ interface Child {
   notes: string;
 }
 
-type Section = "children" | "profile" | "parents" | "nanis" | "sections" | "espace-parent" | "financement";
+type Section =
+  | "children"
+  | "profile"
+  | "parents"
+  | "nanis"
+  | "sections"
+  | "menus"
+  | "activities"
+  | "reports"
+  | "espace-parent"
+  | "financement";
 
 interface SectionGroup {
   id: string;
@@ -284,6 +315,26 @@ function AdminDashboard() {
   const [parents, setParents] = useState<Parent[]>([]);
   const [loading, setLoading] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
+  const [writeError, setWriteError] = useState<string | null>(null);
+
+  /* -- Menus, Activités, Annonces (Supabase) -- */
+  const [menus, setMenus] = useState<MenuDay[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [extrasMissing, setExtrasMissing] = useState(false);
+
+  /* -- Financement (localStorage) -- */
+  const [finance, setFinance] = useState<FinanceEntry[]>(() => {
+    try {
+      const saved = localStorage.getItem("creche_finance");
+      return saved ? (JSON.parse(saved) as FinanceEntry[]) : [];
+    } catch { return []; }
+  });
+
+  function saveFinance(updated: FinanceEntry[]) {
+    setFinance(updated);
+    localStorage.setItem("creche_finance", JSON.stringify(updated));
+  }
 
   /* -- Sections & groupes (localStorage) -- */
   const [crecheSections, setCrecheSections] = useState<CrecheSection[]>(() => {
@@ -345,28 +396,19 @@ function AdminDashboard() {
     }
   }, []);
 
-  /* ── Personnel / Menus / Activités: loaded separately so a missing table never blocks the admin ── */
+  /* ── Menus / Activités / Annonces: loaded separately so a missing table never blocks the admin ── */
   const fetchExtras = useCallback(async () => {
-    try {
-      const [s, sa, m, a] = await Promise.all([
-        supabase.from("staff").select("*").order("created_at"),
-        supabase.from("staff_attendance").select("*"),
-        supabase.from("menus").select("*"),
-        supabase.from("activities").select("*").order("created_at"),
-      ]);
-      if (s.error) throw s.error;
-      if (sa.error) throw sa.error;
-      if (m.error) throw m.error;
-      if (a.error) throw a.error;
-      setStaff((s.data ?? []).map((r) => dbToStaff(r as Record<string, unknown>)));
-      setStaffAttendance((sa.data ?? []).map((r) => dbToStaffAttendance(r as Record<string, unknown>)));
-      setMenus((m.data ?? []).map((r) => dbToMenu(r as Record<string, unknown>)));
-      setActivities((a.data ?? []).map((r) => dbToActivity(r as Record<string, unknown>)));
-      setExtrasMissing(false);
-    } catch (err) {
-      console.error("Supabase extras load error:", err);
-      setExtrasMissing(true);
-    }
+    const [m, a, n] = await Promise.all([
+      supabase.from("menus").select("*"),
+      supabase.from("activities").select("*").order("created_at"),
+      supabase.from("announcements").select("*").order("created_at"),
+    ]);
+    if (!m.error) setMenus((m.data ?? []).map((r) => dbToMenu(r as Record<string, unknown>)));
+    if (!a.error) setActivities((a.data ?? []).map((r) => dbToActivity(r as Record<string, unknown>)));
+    if (!n.error) setAnnouncements((n.data ?? []).map((r) => dbToAnnouncement(r as Record<string, unknown>)));
+    const failed = m.error ?? a.error ?? n.error;
+    if (failed) console.error("Supabase extras load error:", failed);
+    setExtrasMissing(Boolean(failed));
   }, []);
 
   useEffect(() => { fetchAll(); fetchExtras(); }, [fetchAll, fetchExtras]);
@@ -394,6 +436,42 @@ function AdminDashboard() {
     const { error } = await supabase.from("parents").delete().eq("id", id);
     if (error) reportWrite("suppression parent", error);
   }
+  async function upsertMenu(m: MenuDay) {
+    const { error } = await supabase.from("menus").upsert(menuToDb(m), { onConflict: "week_start,day" });
+    if (error) reportWrite("menu", error);
+  }
+  async function upsertActivity(a: Activity) {
+    const { error } = await supabase.from("activities").upsert(activityToDb(a));
+    if (error) reportWrite("activité", error);
+  }
+  async function deleteActivityDb(id: string) {
+    const { error } = await supabase.from("activities").delete().eq("id", id);
+    if (error) reportWrite("suppression activité", error);
+  }
+  async function upsertAnnouncement(a: Announcement) {
+    const { error } = await supabase.from("announcements").upsert(announcementToDb(a));
+    if (error) reportWrite("annonce", error);
+  }
+  async function deleteAnnouncementDb(id: string) {
+    const { error } = await supabase.from("announcements").delete().eq("id", id);
+    if (error) reportWrite("suppression annonce", error);
+  }
+
+  /* ── Lien enfant ↔ parent: un parent rattaché à un enfant met à jour l'enfant aussi ── */
+  function changeChildLink(childId: string, parentId: string, linked: boolean) {
+    const child = children.find((c) => c.id === childId);
+    if (!child || child.parentIds.includes(parentId) === linked) return;
+    const updated: Child = {
+      ...child,
+      parentIds: linked ? [...child.parentIds, parentId] : child.parentIds.filter((p) => p !== parentId),
+    };
+    setChildren((prev) => prev.map((c) => (c.id === childId ? updated : c)));
+    upsertChild(updated);
+  }
+  function removeParentCascade(id: string) {
+    children.filter((c) => c.parentIds.includes(id)).forEach((c) => changeChildLink(c.id, id, false));
+    deleteParentDb(id);
+  }
 
 
 
@@ -419,6 +497,9 @@ function AdminDashboard() {
     { id: "parents", label: "Parents", icon: <Users size={20} /> },
     { id: "nanis", label: "Nanis", icon: <Heart size={20} /> },
     { id: "sections", label: "Section & Groupe", icon: <Layers size={20} /> },
+    { id: "menus", label: "Menus", icon: <UtensilsCrossed size={20} /> },
+    { id: "activities", label: "Activités", icon: <CalendarDays size={20} /> },
+    { id: "reports", label: "Rapports", icon: <BarChart3 size={20} /> },
     { id: "espace-parent", label: "Espace Parent", icon: <Home size={20} /> },
     { id: "financement", label: "Financement", icon: <TrendingUp size={20} /> },
   ];
@@ -643,6 +724,13 @@ function AdminDashboard() {
           <ErrorBanner message={writeError} onClose={() => setWriteError(null)} />
         )}
 
+        {extrasMissing && !loading && !dbError && (section === "menus" || section === "activities" || section === "espace-parent") && (
+          <div style={{ ...card, marginBottom: "1rem", fontSize: "0.88rem", color: "oklch(0.45 0.10 270)" }}>
+            ℹ️ Les tables Menus / Activités / Annonces n'existent pas encore. Exécutez{" "}
+            <code>supabase_schema.sql</code> dans Supabase → SQL Editor, puis rechargez la page.
+          </div>
+        )}
+
         {/* Sections */}
         {!loading && !dbError && section === "children" && (
           <ChildrenSection
@@ -652,7 +740,7 @@ function AdminDashboard() {
             setParents={setParents}
             onViewProfile={openProfile}
             onChildAdded={upsertChild}
-            onChildRemoved={removeChildCascade}
+            onChildRemoved={deleteChildDb}
             onParentAdded={upsertParent}
             crecheSections={crecheSections}
           />
@@ -670,7 +758,8 @@ function AdminDashboard() {
             setParents={setParents}
             children={children}
             onParentAdded={upsertParent}
-            onParentRemoved={deleteParentDb}
+            onParentRemoved={removeParentCascade}
+            onChildLinkChange={changeChildLink}
           />
         )}
         {!loading && !dbError && section === "nanis" && (
@@ -688,8 +777,37 @@ function AdminDashboard() {
             onSave={saveSections}
           />
         )}
-        {!loading && !dbError && section === "espace-parent" && <ComingSoon icon="🏠" title="Espace Parent" desc="Portail de communication et suivi pour les familles." />}
-        {!loading && !dbError && section === "financement" && <ComingSoon icon="📊" title="Financement & Dépenses" desc="Suivi budgétaire, subventions et dépenses de la crèche." />}
+        {!loading && !dbError && section === "menus" && (
+          <MenusSection menus={menus} setMenus={setMenus} onMenuUpsert={upsertMenu} />
+        )}
+        {!loading && !dbError && section === "activities" && (
+          <ActivitiesSection
+            activities={activities}
+            setActivities={setActivities}
+            onActivityUpsert={upsertActivity}
+            onActivityDelete={deleteActivityDb}
+          />
+        )}
+        {!loading && !dbError && section === "reports" && (
+          <ReportsSection
+            children={children}
+            parentsCount={parents.length}
+            nanisCount={nanis.length}
+            presences={naniPresences}
+            finance={finance}
+          />
+        )}
+        {!loading && !dbError && section === "espace-parent" && (
+          <EspaceParentSection
+            announcements={announcements}
+            setAnnouncements={setAnnouncements}
+            onAnnouncementUpsert={upsertAnnouncement}
+            onAnnouncementDelete={deleteAnnouncementDb}
+          />
+        )}
+        {!loading && !dbError && section === "financement" && (
+          <FinanceSection entries={finance} onSave={saveFinance} />
+        )}
 
 
       </main>
@@ -839,6 +957,7 @@ function ChildrenSection({
   onViewProfile,
   onChildAdded,
   onChildRemoved,
+  onParentAdded,
   crecheSections,
 }: {
   children: Child[];
@@ -894,25 +1013,44 @@ function ChildrenSection({
     const newChild: Child = { id: uid(), ...form };
     setChildren((prev) => [...prev, newChild]);
     onChildAdded(newChild);
+    syncParentLinks(newChild.id, [], newChild.parentIds);
     setForm(emptyChild);
     setFormStep("identification");
     setShowForm(false);
   }
 
+  /** Garde les deux côtés du lien enfant ↔ parent synchronisés (état + Supabase). */
+  function syncParentLinks(childId: string, before: string[], after: string[]) {
+    const updated = parents
+      .filter((p) => before.includes(p.id) !== after.includes(p.id))
+      .map((p) => ({
+        ...p,
+        childIds: after.includes(p.id)
+          ? [...p.childIds.filter((c) => c !== childId), childId]
+          : p.childIds.filter((c) => c !== childId),
+      }));
+    if (updated.length === 0) return;
+    setParents((prev) => prev.map((p) => updated.find((u) => u.id === p.id) ?? p));
+    updated.forEach((u) => onParentAdded?.(u));
+  }
 
   function removeChild(id: string) {
     if (!confirm("Supprimer cet enfant ?")) return;
+    const linked = parents.filter((p) => p.childIds.includes(id));
     setChildren((prev) => prev.filter((c) => c.id !== id));
     setParents((prev) =>
       prev.map((p) => ({ ...p, childIds: p.childIds.filter((cid) => cid !== id) }))
     );
+    linked.forEach((p) => onParentAdded?.({ ...p, childIds: p.childIds.filter((cid) => cid !== id) }));
     onChildRemoved(id);
   }
 
   function saveEdit() {
     if (!editChild) return;
+    const before = children.find((c) => c.id === editChild.id)?.parentIds ?? [];
     setChildren((prev) => prev.map((c) => c.id === editChild.id ? editChild : c));
     onChildAdded(editChild); // upsert in Supabase
+    syncParentLinks(editChild.id, before, editChild.parentIds);
     setEditChild(null);
     setEditStep("identification");
   }
@@ -1142,6 +1280,8 @@ function ChildrenSection({
                   </select>
                 </Field>
               </div>
+              {/* Parents rattachés */}
+              <ParentPicker parents={parents} value={form.parentIds} onChange={(ids) => setF("parentIds", ids)} />
               {/* Personnes autorisées */}
               <div>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.6rem" }}>
@@ -1572,6 +1712,8 @@ function ChildrenSection({
                     </select>
                   </Field>
                 </div>
+                {/* Parents rattachés */}
+                <ParentPicker parents={parents} value={editChild.parentIds} onChange={(ids) => setEC("parentIds", ids)} />
                 {/* Personnes autorisées */}
                 <div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.6rem" }}>
@@ -1752,6 +1894,54 @@ function ChildrenSection({
   );
 }
 
+function ParentPicker({
+  parents,
+  value,
+  onChange,
+}: {
+  parents: Parent[];
+  value: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  return (
+    <div>
+      <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.85rem", color: "oklch(0.45 0.18 260)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.6rem" }}>
+        👨‍👩‍👧 Parents rattachés
+      </div>
+      {parents.length === 0 ? (
+        <p style={{ margin: 0, fontSize: "0.85rem", color: "oklch(0.55 0.07 260)" }}>
+          Aucun parent enregistré. Ajoutez-en dans l'onglet « Parents » pour les rattacher à cet enfant.
+        </p>
+      ) : (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+          {parents.map((p) => {
+            const on = value.includes(p.id);
+            return (
+              <button
+                type="button"
+                key={p.id}
+                onClick={() => onChange(on ? value.filter((id) => id !== p.id) : [...value, p.id])}
+                style={{
+                  padding: "0.3rem 0.8rem",
+                  borderRadius: "9999px",
+                  border: `1.5px solid ${on ? "oklch(0.55 0.22 142)" : "oklch(0.75 0.07 260 / .5)"}`,
+                  background: on ? "oklch(0.55 0.22 142 / .12)" : "transparent",
+                  color: on ? "oklch(0.40 0.20 142)" : "oklch(0.55 0.07 265)",
+                  fontSize: "0.82rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {on ? "✓" : "+"} {p.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ModalSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: "1.25rem" }}>
@@ -1917,15 +2107,38 @@ export function ParentsSection({
     childIds: [],
   });
   const [search, setSearch] = useState("");
+  const [editId, setEditId] = useState<string | null>(null);
+
+  function closeForm() {
+    setForm({ name: "", phone: "", email: "", childIds: [] });
+    setEditId(null);
+    setShowForm(false);
+  }
+
+  function startEdit(p: Parent) {
+    setForm({ name: p.name, phone: p.phone, email: p.email, childIds: p.childIds });
+    setEditId(p.id);
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   function addParent() {
     if (!form.name.trim()) return;
+    if (editId) {
+      const before = parents.find((p) => p.id === editId)?.childIds ?? [];
+      const updated: Parent = { id: editId, ...form };
+      setParents((prev) => prev.map((p) => (p.id === editId ? updated : p)));
+      onParentAdded(updated);
+      form.childIds.filter((c) => !before.includes(c)).forEach((c) => onChildLinkChange(c, editId, true));
+      before.filter((c) => !form.childIds.includes(c)).forEach((c) => onChildLinkChange(c, editId, false));
+      closeForm();
+      return;
+    }
     const newParent: Parent = { id: uid(), ...form };
     setParents((prev) => [...prev, newParent]);
     onParentAdded(newParent);
     newParent.childIds.forEach((cid) => onChildLinkChange(cid, newParent.id, true));
-    setForm({ name: "", phone: "", email: "", childIds: [] });
-    setShowForm(false);
+    closeForm();
   }
 
   function removeParent(id: string) {
@@ -1959,7 +2172,7 @@ export function ParentsSection({
         count={parents.length}
         action={
           <button
-            onClick={() => setShowForm((v) => !v)}
+            onClick={() => (showForm ? closeForm() : setShowForm(true))}
             style={{
               display: "flex",
               alignItems: "center",
@@ -1985,7 +2198,7 @@ export function ParentsSection({
       {showForm && (
         <div style={{ ...card, marginBottom: "1.25rem" }}>
           <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1.05rem", color: "oklch(0.35 0.1 270)", marginBottom: "1rem" }}>
-            ✏️ Nouveau parent
+            {editId ? "✏️ Modifier le parent" : "✏️ Nouveau parent"}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
             <Field label="Nom complet *">
@@ -2041,7 +2254,7 @@ export function ParentsSection({
             <button onClick={addParent} className="kid-btn bg-kid-green" style={{ flex: 1 }}>
               <span className="relative z-10 flex items-center gap-2 justify-center"><Check size={16} /> Enregistrer</span>
             </button>
-            <button onClick={() => setShowForm(false)} className="kid-btn bg-kid-pink" style={{ flex: 1 }}>
+            <button onClick={closeForm} className="kid-btn bg-kid-pink" style={{ flex: 1 }}>
               <span className="relative z-10 flex items-center gap-2 justify-center"><X size={16} /> Annuler</span>
             </button>
           </div>
@@ -2078,9 +2291,14 @@ export function ParentsSection({
                       </div>
                     )}
                   </div>
-                  <button onClick={() => removeParent(parent.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "oklch(0.60 0.15 27)", padding: "0.1rem" }}>
-                    <X size={16} />
-                  </button>
+                  <div style={{ display: "flex", gap: "0.35rem" }}>
+                    <button onClick={() => startEdit(parent)} title="Modifier" style={{ background: "none", border: "none", cursor: "pointer", color: "oklch(0.50 0.15 260)", padding: "0.1rem" }}>
+                      <Pencil size={15} />
+                    </button>
+                    <button onClick={() => removeParent(parent.id)} title="Supprimer" style={{ background: "none", border: "none", cursor: "pointer", color: "oklch(0.60 0.15 27)", padding: "0.1rem" }}>
+                      <X size={16} />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Phone + actions */}
@@ -2202,7 +2420,7 @@ function NanisSection({
   const [presenceModal, setPresenceModal] = useState<{ nani: Nani; month: string } | null>(null);
   const [dayPicker, setDayPicker] = useState<{ naniId: string; month: string; day: string } | null>(null);
   const [printPicker, setPrintPicker] = useState<{ nani: Nani } | null>(null);
-  const [printPickerMonth, setPrintPickerMonth] = useState(todayMonth);
+  const [editNaniId, setEditNaniId] = useState<string | null>(null);
 
   // Tous les groupes disponibles
   const allGroups = crecheSections.flatMap((s) => s.groups);
@@ -2213,6 +2431,7 @@ function NanisSection({
     return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`;
   })();
   const [currentMonth, setCurrentMonth] = useState(todayMonth);
+  const [printPickerMonth, setPrintPickerMonth] = useState(todayMonth);
 
   function prevMonth() {
     const [y, m] = currentMonth.split("-").map(Number);
@@ -2269,8 +2488,25 @@ function NanisSection({
 
   function addNani() {
     if (!form.firstName.trim() || !form.lastName.trim()) return;
-    onSaveNanis([...nanis, { id: uid(), ...form }]);
+    if (editNaniId) {
+      onSaveNanis(nanis.map((n) => (n.id === editNaniId ? { id: editNaniId, ...form } : n)));
+    } else {
+      onSaveNanis([...nanis, { id: uid(), ...form }]);
+    }
     setForm({ firstName: "", lastName: "", phone: "", group: "" });
+    setEditNaniId(null);
+    setTab("liste");
+  }
+
+  function startEditNani(n: Nani) {
+    setForm({ firstName: n.firstName, lastName: n.lastName, phone: n.phone, group: n.group });
+    setEditNaniId(n.id);
+    setTab("ajouter");
+  }
+
+  function cancelNaniForm() {
+    setForm({ firstName: "", lastName: "", phone: "", group: "" });
+    setEditNaniId(null);
     setTab("liste");
   }
 
@@ -2351,19 +2587,19 @@ function NanisSection({
           : (
             <div style={{ ...card, padding: "0", overflow: "hidden" }}>
               {/* Header */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr auto auto",
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr auto auto auto",
                 gap: "0.75rem", alignItems: "center",
                 padding: "0.6rem 1.25rem",
                 background: "linear-gradient(135deg, oklch(0.60 0.22 310 / .12), oklch(0.52 0.22 260 / .12))",
                 borderBottom: "1.5px solid oklch(0.85 0.05 265 / .5)",
               }}>
-                {["Prénom", "Nom", "Téléphone", "Groupe", "", ""].map((h, i) => (
+                {["Prénom", "Nom", "Téléphone", "Groupe", "", "", ""].map((h, i) => (
                   <div key={i} style={{ fontSize: "0.72rem", fontWeight: 700, color: "oklch(0.45 0.10 270)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</div>
                 ))}
               </div>
               {nanis.map((n, idx) => (
                 <div key={n.id} style={{
-                  display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr auto auto",
+                  display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr auto auto auto",
                   gap: "0.75rem", alignItems: "center",
                   padding: "0.75rem 1.25rem",
                   borderBottom: idx < nanis.length - 1 ? "1px solid oklch(0.90 0.03 265 / .6)" : "none",
@@ -2384,6 +2620,9 @@ function NanisSection({
                   >
                     🖨️
                   </button>
+                  <button onClick={() => startEditNani(n)} title="Modifier" style={{ display: "flex", alignItems: "center", padding: "0.35rem 0.5rem", borderRadius: "0.6rem", border: "1.5px solid oklch(0.55 0.18 260 / .4)", background: "oklch(0.55 0.18 260 / .08)", color: "oklch(0.40 0.15 260)", cursor: "pointer" }}>
+                    <Pencil size={13} />
+                  </button>
                   <button onClick={() => removeNani(n.id)} title="Supprimer" style={{ display: "flex", alignItems: "center", padding: "0.35rem 0.5rem", borderRadius: "0.6rem", border: "1.5px solid oklch(0.577 0.245 27 / .3)", background: "oklch(0.577 0.245 27 / .07)", color: "oklch(0.50 0.22 27)", cursor: "pointer" }}>
                     <X size={13} />
                   </button>
@@ -2397,7 +2636,7 @@ function NanisSection({
       {tab === "ajouter" && (
         <div style={card}>
           <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "1rem", color: "oklch(0.35 0.1 270)", marginBottom: "1rem" }}>
-            👩‍🍼 Nouvelle nani
+            {editNaniId ? "✏️ Modifier la nani" : "👩‍🍼 Nouvelle nani"}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
             <Field label="Prénom *">
@@ -2437,7 +2676,7 @@ function NanisSection({
             >
               <Check size={16} /> Enregistrer
             </button>
-            <button onClick={() => setTab("liste")} style={{ padding: "0.65rem 1rem", borderRadius: "9999px", border: "none", background: "oklch(0.577 0.245 27 / .12)", color: "oklch(0.50 0.22 27)", fontFamily: "var(--font-display)", fontWeight: 700, cursor: "pointer" }}>
+            <button onClick={cancelNaniForm} style={{ padding: "0.65rem 1rem", borderRadius: "9999px", border: "none", background: "oklch(0.577 0.245 27 / .12)", color: "oklch(0.50 0.22 27)", fontFamily: "var(--font-display)", fontWeight: 700, cursor: "pointer" }}>
               <X size={16} />
             </button>
           </div>
@@ -2916,73 +3155,6 @@ function SectionsSection({
           })}
         </div>
       )}
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────
-   COMING SOON — placeholder sections
-───────────────────────────────────────────── */
-function ComingSoon({ icon, title, desc }: { icon: string; title: string; desc: string }) {
-  return (
-    <div style={{ maxWidth: "520px", margin: "5rem auto", textAlign: "center" }}>
-      <div
-        style={{
-          ...card,
-          padding: "3rem 2rem",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        {/* Decorative glow */}
-        <div
-          style={{
-            position: "absolute",
-            top: "-40px",
-            right: "-40px",
-            width: "160px",
-            height: "160px",
-            borderRadius: "50%",
-            background: "linear-gradient(135deg, oklch(0.65 0.22 310 / .18), oklch(0.55 0.22 260 / .15))",
-            filter: "blur(32px)",
-            pointerEvents: "none",
-          }}
-        />
-        <div style={{ fontSize: "4rem", marginBottom: "1rem", lineHeight: 1 }}>{icon}</div>
-        <h2
-          style={{
-            fontFamily: "var(--font-display)",
-            fontWeight: 800,
-            fontSize: "1.6rem",
-            margin: "0 0 0.5rem",
-            background: "linear-gradient(135deg, oklch(0.60 0.22 310), oklch(0.52 0.22 260))",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-          }}
-        >
-          {title}
-        </h2>
-        <p style={{ fontSize: "0.95rem", color: "oklch(0.52 0.08 265)", marginBottom: "1.75rem", lineHeight: 1.6 }}>
-          {desc}
-        </p>
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            padding: "0.55rem 1.25rem",
-            borderRadius: "9999px",
-            background: "linear-gradient(135deg, oklch(0.60 0.22 310 / .12), oklch(0.52 0.22 260 / .12))",
-            border: "1.5px solid oklch(0.65 0.18 290 / .3)",
-            color: "oklch(0.50 0.15 280)",
-            fontSize: "0.85rem",
-            fontWeight: 700,
-            fontFamily: "var(--font-display)",
-          }}
-        >
-          🚧 En cours de développement
-        </div>
-      </div>
     </div>
   );
 }

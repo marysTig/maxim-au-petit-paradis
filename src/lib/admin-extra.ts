@@ -1,27 +1,9 @@
-/* App types + Supabase mappers for the Personnel, Menus and Activités modules. */
+/* App types + Supabase mappers for the Menus, Activités and Annonces (Espace Parent) modules. */
 
 type Row = Record<string, unknown>;
 
 const str = (v: unknown): string => (v as string | null | undefined) ?? "";
 const nul = (v: string): string | null => (v === "" ? null : v);
-
-export interface Staff {
-  id: string;
-  name: string;
-  role: string;
-  phone: string;
-  email: string;
-  section: string;
-  hireDate: string;
-  notes: string;
-}
-
-export interface StaffAttendance {
-  staffId: string;
-  date: string; // YYYY-MM-DD
-  arrival: string | null;
-  departure: string | null;
-}
 
 export interface MenuDay {
   weekStart: string; // Monday, YYYY-MM-DD
@@ -41,47 +23,22 @@ export interface Activity {
   notes: string;
 }
 
-export function dbToStaff(r: Row): Staff {
-  return {
-    id: str(r["id"]),
-    name: str(r["name"]),
-    role: str(r["role"]),
-    phone: str(r["phone"]),
-    email: str(r["email"]),
-    section: str(r["section"]) || "Toutes",
-    hireDate: str(r["hire_date"]),
-    notes: str(r["notes"]),
-  };
-}
-export function staffToDb(s: Staff) {
-  return {
-    id: s.id,
-    name: s.name,
-    role: nul(s.role),
-    phone: nul(s.phone),
-    email: nul(s.email),
-    section: s.section || "Toutes",
-    hire_date: nul(s.hireDate),
-    notes: nul(s.notes),
-  };
+export interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  date: string; // YYYY-MM-DD
 }
 
-export function dbToStaffAttendance(r: Row): StaffAttendance {
-  return {
-    staffId: str(r["staff_id"]),
-    date: str(r["date"]),
-    arrival: (r["arrival"] as string | null) ?? null,
-    departure: (r["departure"] as string | null) ?? null,
-  };
-}
-export function staffAttendanceToDb(a: StaffAttendance) {
-  return {
-    id: `${a.staffId}_${a.date}`,
-    staff_id: a.staffId,
-    date: a.date,
-    arrival: a.arrival ?? null,
-    departure: a.departure ?? null,
-  };
+export type FinanceKind = "recette" | "subvention" | "depense";
+
+/** Financement entries are kept in localStorage, like Nanis and Sections. */
+export interface FinanceEntry {
+  id: string;
+  kind: FinanceKind;
+  label: string;
+  amount: number;
+  date: string; // YYYY-MM-DD
 }
 
 export function dbToMenu(r: Row): MenuDay {
@@ -124,5 +81,22 @@ export function activityToDb(a: Activity) {
     title: a.title,
     section: a.section || "Toutes",
     notes: nul(a.notes),
+  };
+}
+
+export function dbToAnnouncement(r: Row): Announcement {
+  return {
+    id: str(r["id"]),
+    title: str(r["title"]),
+    body: str(r["body"]),
+    date: str(r["date"]),
+  };
+}
+export function announcementToDb(a: Announcement) {
+  return {
+    id: a.id,
+    title: a.title,
+    body: nul(a.body),
+    date: a.date,
   };
 }

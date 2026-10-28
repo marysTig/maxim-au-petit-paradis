@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   addDays,
   buildReport,
+  financeToCsv,
   localDateStr,
-  paymentsToCsv,
   weekStartOf,
 } from "@/lib/admin-helpers";
 
@@ -25,67 +25,60 @@ describe("date helpers", () => {
 });
 
 describe("buildReport", () => {
-  const children = [
-    { id: "a", section: "Bébés" },
-    { id: "b", section: "Grands" },
-  ];
+  const children = [{ section: "Bébés" }, { section: "Grands" }, { section: "Bébés" }];
 
-  it("computes attendance rate over distinct days of the month", () => {
+  it("counts children per section", () => {
+    const r = buildReport({ children, presences: {}, finance: [], month: "2026-10" });
+    expect(r.childCount).toBe(3);
+    expect(r.sectionCounts).toEqual({ Bébés: 2, Grands: 1 });
+  });
+
+  it("counts nani presence and absence days for the month only", () => {
     const r = buildReport({
-      children,
-      attendance: [
-        { childId: "a", date: "2026-10-01", arrival: "08:00" },
-        { childId: "b", date: "2026-10-01", arrival: "08:10" },
-        { childId: "a", date: "2026-10-02", arrival: "08:05" },
-        { childId: "b", date: "2026-10-03", arrival: null },
-        { childId: "a", date: "2026-09-30", arrival: "08:00" },
-      ],
-      payments: [],
+      children: [],
+      presences: {
+        "n1::2026-10": { "2026-10-01": "present", "2026-10-02": "present", "2026-10-03": "absent" },
+        "n2::2026-10": { "2026-10-01": "present" },
+        "n1::2026-09": { "2026-09-30": "present" },
+      },
+      finance: [],
       month: "2026-10",
     });
-    expect(r.attendanceDays).toBe(2);
-    expect(r.attendanceRate).toBe(0.75);
-    expect(r.sectionCounts).toEqual({ Bébés: 1, Grands: 1 });
+    expect(r.naniPresentDays).toBe(3);
+    expect(r.naniAbsentDays).toBe(1);
+  });
+
+  it("totals finance by kind for the month and computes the balance", () => {
+    const r = buildReport({
+      children: [],
+      presences: {},
+      finance: [
+        { kind: "recette", amount: 500, date: "2026-10-02" },
+        { kind: "subvention", amount: 300, date: "2026-10-10" },
+        { kind: "depense", amount: 200, date: "2026-10-15" },
+        { kind: "depense", amount: 999, date: "2026-09-15" },
+      ],
+      month: "2026-10",
+    });
+    expect(r.finance).toEqual({ recette: 500, subvention: 300, depense: 200 });
+    expect(r.balance).toBe(600);
   });
 
   it("never returns NaN on empty data", () => {
-    const r = buildReport({ children: [], attendance: [], payments: [], month: "2026-10" });
-    expect(r.attendanceRate).toBe(0);
-    expect(r.attendanceDays).toBe(0);
-    expect(r.payments.paid).toEqual({ count: 0, total: 0 });
-    expect(r.payments.pending).toEqual({ count: 0, total: 0 });
-    expect(r.payments.late).toEqual({ count: 0, total: 0 });
-  });
-
-  it("splits payments by status and filters by month", () => {
-    const r = buildReport({
-      children,
-      attendance: [],
-      payments: [
-        { childId: "a", month: "2026-10", amount: 350, status: "paid" },
-        { childId: "b", month: "2026-10", amount: 350, status: "late" },
-        { childId: "a", month: "2026-09", amount: 350, status: "paid" },
-        { childId: "b", month: "2026-10", amount: 100, status: "paid" },
-      ],
-      month: "2026-10",
-    });
-    expect(r.payments.paid).toEqual({ count: 2, total: 450 });
-    expect(r.payments.late).toEqual({ count: 1, total: 350 });
-    expect(r.payments.pending).toEqual({ count: 0, total: 0 });
+    const r = buildReport({ children: [], presences: {}, finance: [], month: "2026-10" });
+    expect(r.balance).toBe(0);
+    expect(r.naniPresentDays).toBe(0);
   });
 });
 
-describe("paymentsToCsv", () => {
-  it("quotes fields containing separator or quotes", () => {
-    const csv = paymentsToCsv([
-      { childName: 'Dupont; "Léa"', month: "2026-10", amount: 350, status: "paid" },
-    ]);
-    expect(csv).toBe('Enfant;Mois;Montant;Statut\n"Dupont; ""Léa""";2026-10;350;paid');
+describe("financeToCsv", () => {
+  it("writes a header and quotes fields containing the separator", () => {
+    const csv = financeToCsv([{ date: "2026-10-05", kind: "depense", label: 'Jouets; "bois"', amount: 120 }]);
+    expect(csv).toBe('Date;Type;Libellé;Montant\n2026-10-05;Dépense;"Jouets; ""bois""";120');
   });
 
   it("quotes fields containing a newline", () => {
-    const csv = paymentsToCsv([{ childName: "A\nB", month: "2026-10", amount: 1, status: "late" }]);
+    const csv = financeToCsv([{ date: "2026-10-05", kind: "recette", label: "A\nB", amount: 1 }]);
     expect(csv.split("\n").length).toBe(3);
-    expect(csv).toContain('"A\nB"');
   });
 });

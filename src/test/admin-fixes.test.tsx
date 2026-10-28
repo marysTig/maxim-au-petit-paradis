@@ -14,7 +14,12 @@ describe("ParentsSection", () => {
         parents={[]}
         setParents={() => {}}
         children={[
-          { id: "c1", firstName: "Lina", lastName: "Test", birthDate: "", section: "Bébés", parentIds: [], allergies: "", notes: "" },
+          {
+            id: "c1", firstName: "Lina", lastName: "Test", birthDate: "", gender: "", nationality: "",
+            section: "Bébés", group: "", motherName: "", motherProfession: "", motherPhone: "",
+            fatherName: "", fatherProfession: "", fatherPhone: "", siblingsCount: 0, familySituation: "",
+            authorizedPersons: [], parentIds: [], allergies: "", notes: "",
+          },
         ]}
         onParentAdded={onParentAdded}
         onParentRemoved={() => {}}

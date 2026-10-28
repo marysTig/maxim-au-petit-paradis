@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccullieRouteImport } from './routes/accullie'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as EspaceParentRouteImport } from './routes/espace-parent'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,35 +29,44 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EspaceParentRoute = EspaceParentRouteImport.update({
+  id: '/espace-parent',
+  path: '/espace-parent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accullie': typeof AccullieRoute
   '/admin': typeof AdminRoute
+  '/espace-parent': typeof EspaceParentRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accullie': typeof AccullieRoute
   '/admin': typeof AdminRoute
+  '/espace-parent': typeof EspaceParentRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/accullie': typeof AccullieRoute
   '/admin': typeof AdminRoute
+  '/espace-parent': typeof EspaceParentRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/accullie' | '/admin'
+  fullPaths: '/' | '/accullie' | '/admin' | '/espace-parent'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/accullie' | '/admin'
-  id: '__root__' | '/' | '/accullie' | '/admin'
+  to: '/' | '/accullie' | '/admin' | '/espace-parent'
+  id: '__root__' | '/' | '/accullie' | '/admin' | '/espace-parent'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccullieRoute: typeof AccullieRoute
   AdminRoute: typeof AdminRoute
+  EspaceParentRoute: typeof EspaceParentRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +92,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/espace-parent': {
+      id: '/espace-parent'
+      path: '/espace-parent'
+      fullPath: '/espace-parent'
+      preLoaderRoute: typeof EspaceParentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccullieRoute: AccullieRoute,
   AdminRoute: AdminRoute,
+  EspaceParentRoute: EspaceParentRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

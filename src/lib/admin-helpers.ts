@@ -1,10 +1,14 @@
-export type PayStatus = "paid" | "pending" | "late";
+import type { FinanceEntry, FinanceKind } from "./admin-extra";
+
+export type DayStatus = "present" | "absent";
 
 export interface Report {
+  childCount: number;
   sectionCounts: Record<string, number>;
-  attendanceDays: number;
-  attendanceRate: number;
-  payments: Record<PayStatus, { count: number; total: number }>;
+  naniPresentDays: number;
+  naniAbsentDays: number;
+  finance: Record<FinanceKind, number>;
+  balance: number;
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -33,34 +37,45 @@ export function weekStartOf(d: Date): string {
   return localDateStr(copy);
 }
 
+/**
+ * Monthly report. `presences` uses the Nanis storage shape:
+ * "naniId::YYYY-MM" -> { "YYYY-MM-DD": "present" | "absent" }.
+ */
 export function buildReport(input: {
-  children: { id: string; section: string }[];
-  attendance: { childId: string; date: string; arrival: string | null }[];
-  payments: { childId: string; month: string; amount: number; status: PayStatus }[];
+  children: { section: string }[];
+  presences: Record<string, Record<string, DayStatus>>;
+  finance: Pick<FinanceEntry, "kind" | "amount" | "date">[];
   month: string;
 }): Report {
-  const { children, attendance, payments, month } = input;
+  const { children, presences, finance, month } = input;
 
   const sectionCounts: Record<string, number> = {};
   for (const c of children) sectionCounts[c.section] = (sectionCounts[c.section] ?? 0) + 1;
 
-  const arrivals = attendance.filter((a) => a.date.startsWith(month) && a.arrival);
-  const attendanceDays = new Set(arrivals.map((a) => a.date)).size;
-  const denominator = children.length * attendanceDays;
-  const attendanceRate = denominator === 0 ? 0 : arrivals.length / denominator;
-
-  const totals: Report["payments"] = {
-    paid: { count: 0, total: 0 },
-    pending: { count: 0, total: 0 },
-    late: { count: 0, total: 0 },
-  };
-  for (const p of payments) {
-    if (p.month !== month) continue;
-    totals[p.status].count += 1;
-    totals[p.status].total += p.amount;
+  let naniPresentDays = 0;
+  let naniAbsentDays = 0;
+  for (const [key, days] of Object.entries(presences)) {
+    if (!key.endsWith(`::${month}`)) continue;
+    for (const status of Object.values(days)) {
+      if (status === "present") naniPresentDays += 1;
+      else if (status === "absent") naniAbsentDays += 1;
+    }
   }
 
-  return { sectionCounts, attendanceDays, attendanceRate, payments: totals };
+  const totals: Record<FinanceKind, number> = { recette: 0, subvention: 0, depense: 0 };
+  for (const e of finance) {
+    if (!e.date.startsWith(month)) continue;
+    totals[e.kind] += e.amount;
+  }
+
+  return {
+    childCount: children.length,
+    sectionCounts,
+    naniPresentDays,
+    naniAbsentDays,
+    finance: totals,
+    balance: totals.recette + totals.subvention - totals.depense,
+  };
 }
 
 function csvField(value: string | number): string {
@@ -68,12 +83,16 @@ function csvField(value: string | number): string {
   return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export function paymentsToCsv(
-  rows: { childName: string; month: string; amount: number; status: string }[],
-): string {
-  const lines = ["Enfant;Mois;Montant;Statut"];
+const KIND_LABEL: Record<FinanceKind, string> = {
+  recette: "Recette",
+  subvention: "Subvention",
+  depense: "Dépense",
+};
+
+export function financeToCsv(rows: Pick<FinanceEntry, "date" | "kind" | "label" | "amount">[]): string {
+  const lines = ["Date;Type;Libellé;Montant"];
   for (const r of rows) {
-    lines.push([r.childName, r.month, r.amount, r.status].map(csvField).join(";"));
+    lines.push([r.date, KIND_LABEL[r.kind], r.label, r.amount].map(csvField).join(";"));
   }
   return lines.join("\n");
 }

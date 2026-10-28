@@ -2,60 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import {
   activityToDb,
+  announcementToDb,
   dbToActivity,
+  dbToAnnouncement,
   dbToMenu,
-  dbToStaff,
-  dbToStaffAttendance,
   menuToDb,
-  staffAttendanceToDb,
-  staffToDb,
   type Activity,
+  type Announcement,
   type MenuDay,
-  type Staff,
 } from "@/lib/admin-extra";
-
-const staff: Staff = {
-  id: "s1",
-  name: "Amel Benali",
-  role: "Éducatrice",
-  phone: "0555000000",
-  email: "amel@example.com",
-  section: "Bébés",
-  hireDate: "2025-09-01",
-  notes: "Titulaire CAP",
-};
-
-describe("staff mappers", () => {
-  it("round-trips a staff member", () => {
-    expect(dbToStaff(staffToDb(staff))).toEqual(staff);
-  });
-
-  it("turns empty strings into null for the database", () => {
-    const db = staffToDb({ ...staff, email: "", hireDate: "" });
-    expect(db.email).toBeNull();
-    expect(db.hire_date).toBeNull();
-  });
-
-  it("turns null columns into empty strings", () => {
-    const s = dbToStaff({ id: "s2", name: "X", role: null, phone: null, email: null, section: null, hire_date: null, notes: null });
-    expect(s.role).toBe("");
-    expect(s.section).toBe("Toutes");
-  });
-});
-
-describe("staff attendance mappers", () => {
-  it("builds the id from staff id and date", () => {
-    const db = staffAttendanceToDb({ staffId: "s1", date: "2026-10-28", arrival: "08:00", departure: null });
-    expect(db.id).toBe("s1_2026-10-28");
-    expect(db.staff_id).toBe("s1");
-    expect(db.departure).toBeNull();
-  });
-
-  it("reads a row back", () => {
-    const rec = dbToStaffAttendance({ staff_id: "s1", date: "2026-10-28", arrival: "08:00", departure: "17:00" });
-    expect(rec).toEqual({ staffId: "s1", date: "2026-10-28", arrival: "08:00", departure: "17:00" });
-  });
-});
 
 describe("menu mappers", () => {
   const menu: MenuDay = { weekStart: "2026-10-26", day: 0, breakfast: "Lait", lunch: "Riz", snack: "" };
@@ -75,5 +30,22 @@ describe("activity mappers", () => {
     const db = activityToDb(a);
     expect(db.notes).toBeNull();
     expect(dbToActivity(db)).toEqual(a);
+  });
+
+  it("defaults a missing section to Toutes", () => {
+    const a = dbToActivity({ id: "a2", day: 1, start_time: null, end_time: null, title: "Jeux", section: null, notes: null });
+    expect(a.section).toBe("Toutes");
+    expect(a.startTime).toBe("");
+  });
+});
+
+describe("announcement mappers", () => {
+  it("round-trips an announcement", () => {
+    const a: Announcement = { id: "n1", title: "Sortie au parc", body: "Jeudi à 10h", date: "2026-10-28" };
+    expect(dbToAnnouncement(announcementToDb(a))).toEqual(a);
+  });
+
+  it("stores an empty body as null", () => {
+    expect(announcementToDb({ id: "n2", title: "Fermeture", body: "", date: "2026-11-01" }).body).toBeNull();
   });
 });
