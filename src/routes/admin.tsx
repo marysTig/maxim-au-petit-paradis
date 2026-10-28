@@ -21,6 +21,19 @@ import {
   Timer,
   Euro,
 } from "lucide-react";
+import {
+  uid,
+  todayStr,
+  nowStr,
+  card,
+  inputStyle,
+  labelStyle,
+  badge,
+  PageHeader,
+  SectionTitle,
+  Field,
+  EmptyState,
+} from "../components/admin/ui";
 
 /* ─────────────────────────────────────────────
    TYPES
@@ -81,71 +94,6 @@ export const Route = createFileRoute("/admin")({
     }
   },
   component: AdminDashboard,
-});
-
-function uid() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
-
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function nowStr() {
-  return new Date().toLocaleTimeString("fr-FR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-/* ─────────────────────────────────────────────
-   STYLES SHARED
-───────────────────────────────────────────── */
-const card: React.CSSProperties = {
-  background: "oklch(1 0 0 / .72)",
-  backdropFilter: "blur(18px)",
-  WebkitBackdropFilter: "blur(18px)",
-  border: "2px solid oklch(1 0 0 / .85)",
-  borderRadius: "1.5rem",
-  boxShadow: "0 6px 32px -8px oklch(0 0 0 / .12)",
-  padding: "1.5rem",
-};
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "0.6rem 0.9rem",
-  borderRadius: "0.75rem",
-  border: "1.5px solid oklch(0.80 0.07 260 / .5)",
-  background: "oklch(0.98 0.01 260 / .7)",
-  fontSize: "0.9rem",
-  color: "oklch(0.25 0.05 260)",
-  outline: "none",
-  boxSizing: "border-box" as const,
-  fontFamily: "var(--font-sans)",
-};
-
-const labelStyle: React.CSSProperties = {
-  display: "block",
-  fontSize: "0.75rem",
-  fontWeight: 600,
-  color: "oklch(0.45 0.08 260)",
-  marginBottom: "0.3rem",
-  letterSpacing: "0.04em",
-  textTransform: "uppercase" as const,
-};
-
-const badge = (color: string): React.CSSProperties => ({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "0.3rem",
-  padding: "0.2rem 0.65rem",
-  borderRadius: "9999px",
-  fontSize: "0.75rem",
-  fontWeight: 700,
-  background: color,
-  color: "#fff",
-  fontFamily: "var(--font-display)",
-  letterSpacing: "0.03em",
 });
 
 /* ─────────────────────────────────────────────
@@ -1985,92 +1933,11 @@ function ParentsSection({
   );
 }
 
-/* ─────────────────────────────────────────────
-   SHARED UI COMPONENTS
-───────────────────────────────────────────── */
-function PageHeader({
-  icon,
-  title,
-  count,
-  subtitle,
-  action,
-}: {
-  icon: string;
-  title: string;
-  count?: number;
-  subtitle?: string;
-  action?: React.ReactNode;
-}) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.75rem" }}>
-      <div>
-        <h1
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "1.5rem",
-            fontWeight: 700,
-            margin: 0,
-            background: "linear-gradient(135deg, oklch(0.60 0.22 310), oklch(0.52 0.22 260))",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-          }}
-        >
-          {icon} {title}
-          {count !== undefined && (
-            <span style={{ fontSize: "1rem", background: "oklch(0.52 0.22 280 / .15)", WebkitTextFillColor: "oklch(0.52 0.22 280)", padding: "0.1rem 0.55rem", borderRadius: "9999px" }}>
-              {count}
-            </span>
-          )}
-        </h1>
-        {subtitle && <p style={{ margin: "0.15rem 0 0", fontSize: "0.85rem", color: "oklch(0.50 0.08 265)" }}>{subtitle}</p>}
-      </div>
-      {action}
-    </div>
-  );
-}
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.95rem", color: "oklch(0.40 0.10 270)", marginBottom: "0.25rem" }}>
-      {children}
-    </div>
-  );
-}
-
-function Field({
-  label,
-  children,
-  span,
-}: {
-  label: string;
-  children: React.ReactNode;
-  span?: boolean;
-}) {
-  return (
-    <div style={span ? { gridColumn: "1 / -1" } : {}}>
-      <label style={labelStyle}>{label}</label>
-      {children}
-    </div>
-  );
-}
-
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <div style={{ fontSize: "0.73rem", fontWeight: 600, color: "oklch(0.55 0.07 260)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.15rem" }}>{label}</div>
       <div style={{ fontSize: "0.92rem", fontWeight: 600, color: "oklch(0.30 0.08 270)" }}>{value || "—"}</div>
-    </div>
-  );
-}
-
-function EmptyState({ icon, text }: { icon: string; text: string }) {
-  return (
-    <div style={{ ...card, textAlign: "center", padding: "3rem 1.5rem" }}>
-      <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>{icon}</div>
-      <p style={{ color: "oklch(0.55 0.07 260)", fontSize: "0.92rem" }}>{text}</p>
     </div>
   );
 }
