@@ -1826,7 +1826,7 @@ function PaymentsSection({
 /* ─────────────────────────────────────────────
    5. PARENTS
 ───────────────────────────────────────────── */
-function ParentsSection({
+export function ParentsSection({
   parents,
   setParents,
   children,
@@ -1855,6 +1855,7 @@ function ParentsSection({
     const newParent: Parent = { id: uid(), ...form };
     setParents((prev) => [...prev, newParent]);
     onParentAdded(newParent);
+    newParent.childIds.forEach((cid) => onChildLinkChange(cid, newParent.id, true));
     setForm({ name: "", phone: "", email: "", childIds: [] });
     setShowForm(false);
   }

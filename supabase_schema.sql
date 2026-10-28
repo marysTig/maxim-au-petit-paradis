@@ -60,9 +60,13 @@ alter table attendance enable row level security;
 alter table payments   enable row level security;
 
 -- Policies open pour la cle anon (a securiser avec auth si besoin)
+drop policy if exists "allow_all_children" on children;
 create policy "allow_all_children"   on children   for all using (true) with check (true);
+drop policy if exists "allow_all_parents" on parents;
 create policy "allow_all_parents"    on parents     for all using (true) with check (true);
+drop policy if exists "allow_all_attendance" on attendance;
 create policy "allow_all_attendance" on attendance  for all using (true) with check (true);
+drop policy if exists "allow_all_payments" on payments;
 create policy "allow_all_payments"   on payments    for all using (true) with check (true);
 
 -- ============================================================
@@ -125,7 +129,11 @@ alter table staff_attendance enable row level security;
 alter table menus            enable row level security;
 alter table activities       enable row level security;
 
+drop policy if exists "allow_all_staff" on staff;
 create policy "allow_all_staff"            on staff            for all using (true) with check (true);
+drop policy if exists "allow_all_staff_attendance" on staff_attendance;
 create policy "allow_all_staff_attendance" on staff_attendance for all using (true) with check (true);
+drop policy if exists "allow_all_menus" on menus;
 create policy "allow_all_menus"            on menus            for all using (true) with check (true);
+drop policy if exists "allow_all_activities" on activities;
 create policy "allow_all_activities"       on activities       for all using (true) with check (true);
