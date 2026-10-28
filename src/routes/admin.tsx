@@ -345,24 +345,54 @@ function AdminDashboard() {
     }
   }, []);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  /* ── Personnel / Menus / Activités: loaded separately so a missing table never blocks the admin ── */
+  const fetchExtras = useCallback(async () => {
+    try {
+      const [s, sa, m, a] = await Promise.all([
+        supabase.from("staff").select("*").order("created_at"),
+        supabase.from("staff_attendance").select("*"),
+        supabase.from("menus").select("*"),
+        supabase.from("activities").select("*").order("created_at"),
+      ]);
+      if (s.error) throw s.error;
+      if (sa.error) throw sa.error;
+      if (m.error) throw m.error;
+      if (a.error) throw a.error;
+      setStaff((s.data ?? []).map((r) => dbToStaff(r as Record<string, unknown>)));
+      setStaffAttendance((sa.data ?? []).map((r) => dbToStaffAttendance(r as Record<string, unknown>)));
+      setMenus((m.data ?? []).map((r) => dbToMenu(r as Record<string, unknown>)));
+      setActivities((a.data ?? []).map((r) => dbToActivity(r as Record<string, unknown>)));
+      setExtrasMissing(false);
+    } catch (err) {
+      console.error("Supabase extras load error:", err);
+      setExtrasMissing(true);
+    }
+  }, []);
+
+  useEffect(() => { fetchAll(); fetchExtras(); }, [fetchAll, fetchExtras]);
+
+  /* ── Write errors surfaced to the user ── */
+  function reportWrite(label: string, error: unknown) {
+    console.error(`Supabase write error (${label}):`, error);
+    setWriteError(`Échec de l'enregistrement (${label}). Vos modifications peuvent être perdues.`);
+  }
 
   /* ── Sync helpers (upsert / delete) ── */
   async function upsertChild(child: Child) {
     const { error } = await supabase.from("children").upsert(childToDb(child));
-    if (error) console.error("upsertChild:", error);
+    if (error) reportWrite("enfant", error);
   }
   async function deleteChildDb(id: string) {
     const { error } = await supabase.from("children").delete().eq("id", id);
-    if (error) console.error("deleteChild:", error);
+    if (error) reportWrite("suppression enfant", error);
   }
   async function upsertParent(parent: Parent) {
     const { error } = await supabase.from("parents").upsert(parentToDb(parent));
-    if (error) console.error("upsertParent:", error);
+    if (error) reportWrite("parent", error);
   }
   async function deleteParentDb(id: string) {
     const { error } = await supabase.from("parents").delete().eq("id", id);
-    if (error) console.error("deleteParent:", error);
+    if (error) reportWrite("suppression parent", error);
   }
 
 
@@ -609,6 +639,10 @@ function AdminDashboard() {
           </div>
         )}
 
+        {writeError && !loading && !dbError && (
+          <ErrorBanner message={writeError} onClose={() => setWriteError(null)} />
+        )}
+
         {/* Sections */}
         {!loading && !dbError && section === "children" && (
           <ChildrenSection
@@ -618,7 +652,7 @@ function AdminDashboard() {
             setParents={setParents}
             onViewProfile={openProfile}
             onChildAdded={upsertChild}
-            onChildRemoved={deleteChildDb}
+            onChildRemoved={removeChildCascade}
             onParentAdded={upsertParent}
             crecheSections={crecheSections}
           />
@@ -752,8 +786,9 @@ function AdminDashboard() {
             border-top: 1px solid oklch(1 0 0 / .12);
             z-index: 50;
             padding: 0.4rem 0;
-            justify-content: space-around;
+            justify-content: flex-start;
             align-items: center;
+            overflow-x: auto;
           }
         }
       `}</style>
@@ -1859,18 +1894,20 @@ function ChildProfile({
 /* ─────────────────────────────────────────────
    5. PARENTS
 ───────────────────────────────────────────── */
-function ParentsSection({
+export function ParentsSection({
   parents,
   setParents,
   children,
   onParentAdded,
   onParentRemoved,
+  onChildLinkChange,
 }: {
   parents: Parent[];
   setParents: React.Dispatch<React.SetStateAction<Parent[]>>;
   children: Child[];
   onParentAdded: (p: Parent) => void;
   onParentRemoved: (id: string) => void;
+  onChildLinkChange: (childId: string, parentId: string, linked: boolean) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<Omit<Parent, "id">>({
@@ -1886,6 +1923,7 @@ function ParentsSection({
     const newParent: Parent = { id: uid(), ...form };
     setParents((prev) => [...prev, newParent]);
     onParentAdded(newParent);
+    newParent.childIds.forEach((cid) => onChildLinkChange(cid, newParent.id, true));
     setForm({ name: "", phone: "", email: "", childIds: [] });
     setShowForm(false);
   }
@@ -1897,18 +1935,16 @@ function ParentsSection({
   }
 
   function toggleChildLink(parentId: string, childId: string) {
-    setParents((prev) =>
-      prev.map((p) =>
-        p.id === parentId
-          ? {
-              ...p,
-              childIds: p.childIds.includes(childId)
-                ? p.childIds.filter((c) => c !== childId)
-                : [...p.childIds, childId],
-            }
-          : p
-      )
-    );
+    const parent = parents.find((p) => p.id === parentId);
+    if (!parent) return;
+    const linked = !parent.childIds.includes(childId);
+    const updated: Parent = {
+      ...parent,
+      childIds: linked ? [...parent.childIds, childId] : parent.childIds.filter((c) => c !== childId),
+    };
+    setParents((prev) => prev.map((p) => (p.id === parentId ? updated : p)));
+    onParentAdded(updated);
+    onChildLinkChange(childId, parentId, linked);
   }
 
   const filtered = parents.filter((p) =>
@@ -3028,15 +3064,6 @@ function InfoRow({ label, value }: { label: string; value: string }) {
     <div>
       <div style={{ fontSize: "0.73rem", fontWeight: 600, color: "oklch(0.55 0.07 260)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.15rem" }}>{label}</div>
       <div style={{ fontSize: "0.92rem", fontWeight: 600, color: "oklch(0.30 0.08 270)" }}>{value || "—"}</div>
-    </div>
-  );
-}
-
-function EmptyState({ icon, text }: { icon: string; text: string }) {
-  return (
-    <div style={{ ...card, textAlign: "center", padding: "3rem 1.5rem" }}>
-      <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>{icon}</div>
-      <p style={{ color: "oklch(0.55 0.07 260)", fontSize: "0.92rem" }}>{text}</p>
     </div>
   );
 }
