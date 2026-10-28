@@ -51,3 +51,45 @@ export interface DbPayment {
   paid_at: string | null;
   created_at?: string;
 }
+
+export interface DbStaff {
+  id: string;
+  name: string;
+  role: string | null;
+  phone: string | null;
+  email: string | null;
+  section: string;
+  hire_date: string | null;
+  notes: string | null;
+  created_at?: string;
+}
+
+export interface DbStaffAttendance {
+  id: string;
+  staff_id: string;
+  date: string;
+  arrival: string | null;
+  departure: string | null;
+  created_at?: string;
+}
+
+export interface DbMenu {
+  id: string;
+  week_start: string;
+  day: number;
+  breakfast: string | null;
+  lunch: string | null;
+  snack: string | null;
+  created_at?: string;
+}
+
+export interface DbActivity {
+  id: string;
+  day: number;
+  start_time: string | null;
+  end_time: string | null;
+  title: string;
+  section: string;
+  notes: string | null;
+  created_at?: string;
+}

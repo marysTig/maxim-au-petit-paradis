@@ -64,3 +64,68 @@ create policy "allow_all_children"   on children   for all using (true) with che
 create policy "allow_all_parents"    on parents     for all using (true) with check (true);
 create policy "allow_all_attendance" on attendance  for all using (true) with check (true);
 create policy "allow_all_payments"   on payments    for all using (true) with check (true);
+
+-- ============================================================
+-- MODULES PERSONNEL / MENUS / ACTIVITES
+-- A executer dans le SQL Editor de Supabase
+-- ============================================================
+
+-- 5. TABLE PERSONNEL
+create table if not exists staff (
+  id         text primary key,
+  name       text not null,
+  role       text,
+  phone      text,
+  email      text,
+  section    text default 'Toutes',
+  hire_date  text,
+  notes      text,
+  created_at timestamptz default now()
+);
+
+-- 6. TABLE POINTAGE PERSONNEL
+create table if not exists staff_attendance (
+  id         text primary key,
+  staff_id   text not null references staff(id) on delete cascade,
+  date       text not null,
+  arrival    text,
+  departure  text,
+  created_at timestamptz default now(),
+  unique (staff_id, date)
+);
+
+-- 7. TABLE MENUS (un enregistrement par semaine et par jour, 0 = lundi ... 4 = vendredi)
+create table if not exists menus (
+  id         text primary key,
+  week_start text not null,
+  day        smallint not null check (day between 0 and 4),
+  breakfast  text,
+  lunch      text,
+  snack      text,
+  created_at timestamptz default now(),
+  unique (week_start, day)
+);
+
+-- 8. TABLE ACTIVITES (planning hebdomadaire, 0 = lundi ... 4 = vendredi)
+create table if not exists activities (
+  id         text primary key,
+  day        smallint not null check (day between 0 and 4),
+  start_time text,
+  end_time   text,
+  title      text not null,
+  section    text default 'Toutes',
+  notes      text,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_staff_attendance_staff_date on staff_attendance(staff_id, date);
+
+alter table staff            enable row level security;
+alter table staff_attendance enable row level security;
+alter table menus            enable row level security;
+alter table activities       enable row level security;
+
+create policy "allow_all_staff"            on staff            for all using (true) with check (true);
+create policy "allow_all_staff_attendance" on staff_attendance for all using (true) with check (true);
+create policy "allow_all_menus"            on menus            for all using (true) with check (true);
+create policy "allow_all_activities"       on activities       for all using (true) with check (true);
