@@ -66,6 +66,54 @@ export const badge = (color: string): CSSProperties => ({
   letterSpacing: "0.03em",
 });
 
+export const primaryBtn: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "0.4rem",
+  padding: "0.55rem 1.25rem",
+  borderRadius: "9999px",
+  border: "none",
+  background: "linear-gradient(135deg, oklch(0.60 0.22 310), oklch(0.52 0.22 260))",
+  color: "#fff",
+  fontWeight: 700,
+  fontSize: "0.88rem",
+  cursor: "pointer",
+  fontFamily: "var(--font-display)",
+};
+
+export const dangerBtn: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  padding: "0.35rem 0.8rem",
+  borderRadius: "9999px",
+  border: "none",
+  background: "oklch(0.577 0.245 27 / .12)",
+  color: "oklch(0.50 0.20 27)",
+  fontWeight: 600,
+  fontSize: "0.8rem",
+  cursor: "pointer",
+};
+
+export const softBtn: CSSProperties = {
+  ...dangerBtn,
+  background: "oklch(0.52 0.22 260 / .12)",
+  color: "oklch(0.45 0.18 260)",
+};
+
+export const pillBtn = (active: boolean): CSSProperties => ({
+  padding: "0.4rem 1.1rem",
+  borderRadius: "9999px",
+  border: "1.5px solid oklch(0.80 0.07 260 / .5)",
+  cursor: "pointer",
+  fontWeight: 700,
+  fontSize: "0.85rem",
+  fontFamily: "var(--font-display)",
+  background: active
+    ? "linear-gradient(135deg, oklch(0.60 0.22 310), oklch(0.52 0.22 260))"
+    : "oklch(1 0 0 / .6)",
+  color: active ? "#fff" : "oklch(0.45 0.10 270)",
+});
+
 /* ─────────────────────────────────────────────
    SHARED UI COMPONENTS
 ───────────────────────────────────────────── */
