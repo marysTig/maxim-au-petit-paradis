@@ -33,6 +33,7 @@ import {
   SectionTitle,
   Field,
   EmptyState,
+  ErrorBanner,
 } from "../components/admin/ui";
 
 /* ─────────────────────────────────────────────
@@ -197,6 +198,7 @@ function AdminDashboard() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
+  const [writeError, setWriteError] = useState<string | null>(null);
 
   /* ── Initial load from Supabase ── */
   const fetchAll = useCallback(async () => {
@@ -227,34 +229,72 @@ function AdminDashboard() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
+  /* ── Write errors surfaced to the user ── */
+  function reportWrite(label: string, error: unknown) {
+    console.error(`Supabase write error (${label}):`, error);
+    setWriteError(`Échec de l'enregistrement (${label}). Vos modifications peuvent être perdues.`);
+  }
+
   /* ── Sync helpers (upsert / delete) ── */
   async function upsertChild(child: Child) {
     const { error } = await supabase.from("children").upsert(childToDb(child));
-    if (error) console.error("upsertChild:", error);
+    if (error) reportWrite("enfant", error);
   }
   async function deleteChildDb(id: string) {
     const { error } = await supabase.from("children").delete().eq("id", id);
-    if (error) console.error("deleteChild:", error);
+    if (error) reportWrite("suppression enfant", error);
   }
   async function upsertParent(parent: Parent) {
     const { error } = await supabase.from("parents").upsert(parentToDb(parent));
-    if (error) console.error("upsertParent:", error);
+    if (error) reportWrite("parent", error);
   }
   async function deleteParentDb(id: string) {
     const { error } = await supabase.from("parents").delete().eq("id", id);
-    if (error) console.error("deleteParent:", error);
+    if (error) reportWrite("suppression parent", error);
   }
   async function upsertAttendance(rec: AttendanceRecord) {
     const { error } = await supabase.from("attendance").upsert(attendanceToDb(rec), { onConflict: "child_id,date" });
-    if (error) console.error("upsertAttendance:", error);
+    if (error) reportWrite("pointage", error);
   }
   async function upsertPayment(pay: Payment) {
     const { error } = await supabase.from("payments").upsert(paymentToDb(pay));
-    if (error) console.error("upsertPayment:", error);
+    if (error) reportWrite("paiement", error);
   }
   async function deletePaymentDb(id: string) {
     const { error } = await supabase.from("payments").delete().eq("id", id);
-    if (error) console.error("deletePayment:", error);
+    if (error) reportWrite("suppression paiement", error);
+  }
+
+  /* ── Parent ↔ child links: keep both sides in sync and persisted ── */
+  async function removeChildCascade(id: string) {
+    parents
+      .filter((p) => p.childIds.includes(id))
+      .forEach((p) => upsertParent({ ...p, childIds: p.childIds.filter((c) => c !== id) }));
+    await deleteChildDb(id);
+  }
+
+  async function removeParentCascade(id: string) {
+    const affected = children.filter((c) => c.parentIds.includes(id));
+    if (affected.length > 0) {
+      setChildren((prev) =>
+        prev.map((c) => (c.parentIds.includes(id) ? { ...c, parentIds: c.parentIds.filter((p) => p !== id) } : c))
+      );
+      affected.forEach((c) => upsertChild({ ...c, parentIds: c.parentIds.filter((p) => p !== id) }));
+    }
+    await deleteParentDb(id);
+  }
+
+  function changeChildLink(childId: string, parentId: string, linked: boolean) {
+    const child = children.find((c) => c.id === childId);
+    if (!child) return;
+    const parentIds = linked
+      ? child.parentIds.includes(parentId)
+        ? child.parentIds
+        : [...child.parentIds, parentId]
+      : child.parentIds.filter((p) => p !== parentId);
+    const updated: Child = { ...child, parentIds };
+    setChildren((prev) => prev.map((c) => (c.id === childId ? updated : c)));
+    upsertChild(updated);
   }
 
   function logout() {
@@ -504,6 +544,10 @@ function AdminDashboard() {
           </div>
         )}
 
+        {writeError && !loading && !dbError && (
+          <ErrorBanner message={writeError} onClose={() => setWriteError(null)} />
+        )}
+
         {/* Sections */}
         {!loading && !dbError && section === "children" && (
           <ChildrenSection
@@ -513,7 +557,7 @@ function AdminDashboard() {
             setParents={setParents}
             onViewProfile={openProfile}
             onChildAdded={upsertChild}
-            onChildRemoved={deleteChildDb}
+            onChildRemoved={removeChildCascade}
             onParentAdded={upsertParent}
           />
         )}
@@ -549,7 +593,8 @@ function AdminDashboard() {
             setParents={setParents}
             children={children}
             onParentAdded={upsertParent}
-            onParentRemoved={deleteParentDb}
+            onParentRemoved={removeParentCascade}
+            onChildLinkChange={changeChildLink}
           />
         )}
       </main>
@@ -1424,14 +1469,15 @@ function PaymentsSection({
   }
 
   function updateStatus(id: string, status: Payment["status"]) {
-    setPayments((prev) =>
-      prev.map((p) => {
-        if (p.id !== id) return p;
-        const updated = { ...p, status, paidAt: status === "paid" ? new Date().toLocaleDateString("fr-FR") : p.paidAt };
-        onPaymentUpsert(updated);
-        return updated;
-      })
-    );
+    const current = payments.find((p) => p.id === id);
+    if (!current) return;
+    const updated: Payment = {
+      ...current,
+      status,
+      paidAt: status === "paid" ? new Date().toLocaleDateString("fr-FR") : current.paidAt,
+    };
+    setPayments((prev) => prev.map((p) => (p.id === id ? updated : p)));
+    onPaymentUpsert(updated);
   }
 
   function removePayment(id: string) {
@@ -1650,12 +1696,14 @@ function ParentsSection({
   children,
   onParentAdded,
   onParentRemoved,
+  onChildLinkChange,
 }: {
   parents: Parent[];
   setParents: React.Dispatch<React.SetStateAction<Parent[]>>;
   children: Child[];
   onParentAdded: (p: Parent) => void;
   onParentRemoved: (id: string) => void;
+  onChildLinkChange: (childId: string, parentId: string, linked: boolean) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<Omit<Parent, "id">>({
@@ -1682,18 +1730,16 @@ function ParentsSection({
   }
 
   function toggleChildLink(parentId: string, childId: string) {
-    setParents((prev) =>
-      prev.map((p) =>
-        p.id === parentId
-          ? {
-              ...p,
-              childIds: p.childIds.includes(childId)
-                ? p.childIds.filter((c) => c !== childId)
-                : [...p.childIds, childId],
-            }
-          : p
-      )
-    );
+    const parent = parents.find((p) => p.id === parentId);
+    if (!parent) return;
+    const linked = !parent.childIds.includes(childId);
+    const updated: Parent = {
+      ...parent,
+      childIds: linked ? [...parent.childIds, childId] : parent.childIds.filter((c) => c !== childId),
+    };
+    setParents((prev) => prev.map((p) => (p.id === parentId ? updated : p)));
+    onParentAdded(updated);
+    onChildLinkChange(childId, parentId, linked);
   }
 
   const filtered = parents.filter((p) =>
