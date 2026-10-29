@@ -23,8 +23,10 @@ import {
   UtensilsCrossed,
   CalendarDays,
   BarChart3,
+  CreditCard,
 } from "lucide-react";
 import { EmptyState, ErrorBanner } from "../components/admin/ui";
+import { PaymentModal, isPaidFor, thisMonth } from "../components/admin/PaymentModal";
 import { MenusSection } from "../components/admin/MenusSection";
 import { ActivitiesSection } from "../components/admin/ActivitiesSection";
 import { ReportsSection } from "../components/admin/ReportsSection";
@@ -36,11 +38,14 @@ import {
   dbToActivity,
   dbToAnnouncement,
   dbToMenu,
+  dbToPayment,
   menuToDb,
+  paymentToDb,
   type Activity,
   type Announcement,
   type FinanceEntry,
   type MenuDay,
+  type Payment,
 } from "../lib/admin-extra";
 
 /* ─────────────────────────────────────────────
@@ -325,6 +330,9 @@ function AdminDashboard() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [extrasMissing, setExtrasMissing] = useState(false);
 
+  /* -- Paiements des enfants (Supabase, table `payments`) -- */
+  const [payments, setPayments] = useState<Payment[]>([]);
+
   /* -- Financement (localStorage) -- */
   const [finance, setFinance] = useState<FinanceEntry[]>(() => {
     try {
@@ -413,7 +421,17 @@ function AdminDashboard() {
     setExtrasMissing(Boolean(failed));
   }, []);
 
-  useEffect(() => { fetchAll(); fetchExtras(); }, [fetchAll, fetchExtras]);
+  /* ── Paiements: chargés à part pour qu'un souci ici ne bloque pas le reste ── */
+  const fetchPayments = useCallback(async () => {
+    const { data, error } = await supabase.from("payments").select("*");
+    if (error) {
+      console.error("Supabase payments load error:", error);
+      return;
+    }
+    setPayments((data ?? []).map((r) => dbToPayment(r as Record<string, unknown>)));
+  }, []);
+
+  useEffect(() => { fetchAll(); fetchExtras(); fetchPayments(); }, [fetchAll, fetchExtras, fetchPayments]);
 
   /* ── Write errors surfaced to the user ── */
   function reportWrite(label: string, error: unknown) {
@@ -437,6 +455,15 @@ function AdminDashboard() {
   async function deleteParentDb(id: string) {
     const { error } = await supabase.from("parents").delete().eq("id", id);
     if (error) reportWrite("suppression parent", error);
+  }
+  function recordPayment(p: Payment) {
+    setPayments((prev) => [...prev.filter((x) => x.id !== p.id), p]);
+    supabase
+      .from("payments")
+      .upsert(paymentToDb(p))
+      .then(({ error }) => {
+        if (error) reportWrite("paiement", error);
+      });
   }
   async function upsertMenu(m: MenuDay) {
     const { error } = await supabase.from("menus").upsert(menuToDb(m), { onConflict: "week_start,day" });
@@ -741,6 +768,8 @@ function AdminDashboard() {
             onChildAdded={upsertChild}
             onChildRemoved={deleteChildDb}
             onParentAdded={upsertParent}
+            payments={payments}
+            onPay={recordPayment}
             crecheSections={crecheSections}
           />
         )}
@@ -944,6 +973,8 @@ function ChildrenSection({
   onChildAdded,
   onChildRemoved,
   onParentAdded,
+  payments,
+  onPay,
   crecheSections,
 }: {
   children: Child[];
@@ -954,11 +985,15 @@ function ChildrenSection({
   onChildAdded: (c: Child) => void;
   onChildRemoved: (id: string) => void;
   onParentAdded?: (p: Parent) => void;
+  payments: Payment[];
+  onPay: (p: Payment) => void;
   crecheSections: CrecheSection[];
 }) {
   const [showForm, setShowForm] = useState(false);
   const [formStep, setFormStep] = useState<"identification" | "famille">("identification");
   const [selectedChildModal, setSelectedChildModal] = useState<Child | null>(null);
+  // Paiement: depuis la liste = statut seul; depuis la fiche détail = statut + bouton payer
+  const [paymentModal, setPaymentModal] = useState<{ child: Child; view: "status" | "pay"; canPay: boolean } | null>(null);
   const [editChild, setEditChild] = useState<Child | null>(null);
   const [editStep, setEditStep] = useState<"identification" | "famille">("identification");
   const emptyChild: Omit<Child, "id"> = {
@@ -1510,6 +1545,27 @@ function ChildrenSection({
                     >
                       <Eye size={13} />
                     </button>
+                    {/* Bouton Statut de paiement (vert = payé ce mois-ci, orange = en attente) */}
+                    {(() => {
+                      const paid = isPaidFor(payments, child.id, thisMonth());
+                      const tone = paid ? "oklch(0.55 0.22 142)" : "oklch(0.60 0.18 70)";
+                      return (
+                        <button
+                          onClick={() => setPaymentModal({ child, view: "status", canPay: false })}
+                          title={paid ? "Paiement : payé ce mois-ci" : "Paiement : en attente"}
+                          style={{
+                            display: "flex", alignItems: "center", gap: "0.3rem",
+                            padding: "0.35rem 0.55rem", borderRadius: "0.6rem",
+                            border: `1.5px solid ${tone}`,
+                            background: paid ? "oklch(0.55 0.22 142 / .10)" : "oklch(0.60 0.18 70 / .10)",
+                            color: paid ? "oklch(0.38 0.18 142)" : "oklch(0.45 0.15 60)",
+                            cursor: "pointer", fontSize: "0.72rem", fontWeight: 700, whiteSpace: "nowrap",
+                          }}
+                        >
+                          <CreditCard size={13} /> {paid ? "Payé" : "En attente"}
+                        </button>
+                      );
+                    })()}
                     {/* Bouton Modifier */}
                     <button
                       onClick={() => { setEditChild(child); setEditStep("identification"); }}
@@ -1811,6 +1867,32 @@ function ChildrenSection({
                 </div>
               </div>
 
+              {/* 0. Paiement */}
+              <ModalSection title="💳 Paiement">
+                {(() => {
+                  const paid = isPaidFor(payments, mc.id, thisMonth());
+                  return (
+                    <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+                      <span style={badge(paid ? "oklch(0.55 0.22 142)" : "oklch(0.60 0.18 70)")}>
+                        {paid ? "✅ Payé ce mois-ci" : "⏳ En attente ce mois-ci"}
+                      </span>
+                      <button
+                        onClick={() => setPaymentModal({ child: mc, view: "status", canPay: true })}
+                        style={{ padding: "0.4rem 0.9rem", borderRadius: "9999px", border: "1.5px solid oklch(0.55 0.20 260 / .45)", background: "oklch(0.55 0.20 260 / .08)", color: "oklch(0.40 0.18 260)", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer" }}
+                      >
+                        💳 Statut de paiement
+                      </button>
+                      <button
+                        onClick={() => setPaymentModal({ child: mc, view: "pay", canPay: true })}
+                        style={{ padding: "0.4rem 0.9rem", borderRadius: "9999px", border: "none", background: "linear-gradient(135deg, oklch(0.60 0.22 142), oklch(0.48 0.22 155))", color: "#fff", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer" }}
+                      >
+                        💶 Payer
+                      </button>
+                    </div>
+                  );
+                })()}
+              </ModalSection>
+
               {/* 1. Identification */}
               <ModalSection title="🧒 Identification">
                 <ModalRow label="Prénom" value={mc.firstName} />
@@ -1875,6 +1957,18 @@ function ChildrenSection({
           </div>
         );
       })()}
+
+      {/* ── Modale paiement ── */}
+      {paymentModal && (
+        <PaymentModal
+          childId={paymentModal.child.id}
+          childName={`${paymentModal.child.firstName} ${paymentModal.child.lastName}`}
+          payments={payments}
+          initialView={paymentModal.view}
+          onPay={paymentModal.canPay ? onPay : undefined}
+          onClose={() => setPaymentModal(null)}
+        />
+      )}
 
     </div>
   );

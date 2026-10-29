@@ -103,3 +103,35 @@ export function announcementToDb(a: Announcement) {
     published: a.published ?? false,
   };
 }
+
+/** One month's payment for a child. Stored in the existing `payments` table. */
+export interface Payment {
+  id: string;
+  childId: string;
+  month: string; // YYYY-MM
+  amount: number;
+  status: "paid" | "pending" | "late";
+  paidAt: string; // YYYY-MM-DD, "" while unpaid
+}
+
+export function dbToPayment(r: Row): Payment {
+  const status = str(r["status"]);
+  return {
+    id: str(r["id"]),
+    childId: str(r["child_id"]),
+    month: str(r["month"]),
+    amount: Number(r["amount"] ?? 0),
+    status: status === "paid" || status === "late" ? status : "pending",
+    paidAt: str(r["paid_at"]),
+  };
+}
+export function paymentToDb(p: Payment) {
+  return {
+    id: p.id,
+    child_id: p.childId,
+    month: p.month,
+    amount: p.amount,
+    status: p.status,
+    paid_at: nul(p.paidAt),
+  };
+}
