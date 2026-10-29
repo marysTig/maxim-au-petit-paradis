@@ -25,11 +25,17 @@ export function EspaceParentSection({
 
   function addAnnouncement() {
     if (!form.title.trim()) return;
-    const a: Announcement = { id: uid(), title: form.title.trim(), body: form.body.trim(), date: localDateStr() };
+    const a: Announcement = { id: uid(), title: form.title.trim(), body: form.body.trim(), date: localDateStr(), published: true };
     setAnnouncements((prev) => [...prev, a]);
     onAnnouncementUpsert(a);
     setForm({ title: "", body: "" });
     setShowForm(false);
+  }
+
+  function togglePublish(a: Announcement) {
+    const updated: Announcement = { ...a, published: !a.published };
+    setAnnouncements((prev) => prev.map((x) => (x.id === a.id ? updated : x)));
+    onAnnouncementUpsert(updated);
   }
 
   function removeAnnouncement(id: string) {
@@ -123,21 +129,44 @@ export function EspaceParentSection({
       ) : (
         <div style={{ display: "grid", gap: "0.75rem" }}>
           {sorted.map((a) => (
-            <div key={a.id} style={{ ...card, display: "flex", justifyContent: "space-between", gap: "0.75rem" }}>
-              <div>
-                <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, color: "oklch(0.28 0.08 270)" }}>{a.title}</div>
+            <div key={a.id} style={{ ...card, display: "flex", justifyContent: "space-between", gap: "0.75rem", opacity: a.published ? 1 : 0.6 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.2rem" }}>
+                  <span style={{
+                    fontSize: "0.7rem", fontWeight: 700, padding: "0.15rem 0.55rem", borderRadius: "9999px",
+                    background: a.published ? "oklch(0.72 0.22 142)" : "oklch(0.65 0.08 260)",
+                    color: "#fff",
+                  }}>
+                    {a.published ? "✓ Publiée" : "Brouillon"}
+                  </span>
+                  <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, color: "oklch(0.28 0.08 270)" }}>{a.title}</span>
+                </div>
                 <div style={{ fontSize: "0.75rem", color: "oklch(0.55 0.07 260)", marginBottom: "0.3rem" }}>
                   {new Date(a.date + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
                 </div>
                 {a.body && <div style={{ fontSize: "0.88rem", color: "oklch(0.40 0.06 265)", whiteSpace: "pre-wrap" }}>{a.body}</div>}
               </div>
-              <button
-                onClick={() => removeAnnouncement(a.id)}
-                title="Supprimer"
-                style={{ alignSelf: "flex-start", background: "none", border: "none", cursor: "pointer", color: "oklch(0.60 0.15 27)", padding: "0.1rem" }}
-              >
-                <X size={16} />
-              </button>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", alignItems: "flex-end" }}>
+                <button
+                  onClick={() => removeAnnouncement(a.id)}
+                  title="Supprimer"
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "oklch(0.60 0.15 27)", padding: "0.1rem" }}
+                >
+                  <X size={16} />
+                </button>
+                <button
+                  onClick={() => togglePublish(a)}
+                  title={a.published ? "Masquer aux parents" : "Publier pour les parents"}
+                  style={{
+                    fontSize: "0.72rem", fontWeight: 700, padding: "0.2rem 0.6rem", borderRadius: "9999px", border: "none",
+                    cursor: "pointer",
+                    background: a.published ? "oklch(0.65 0.08 260 / 0.12)" : "oklch(0.72 0.22 142)",
+                    color: a.published ? "oklch(0.45 0.08 260)" : "#fff",
+                  }}
+                >
+                  {a.published ? "Masquer" : "Publier"}
+                </button>
+              </div>
             </div>
           ))}
         </div>

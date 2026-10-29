@@ -36,3 +36,7 @@ alter table children
 -- ── Index utiles ─────────────────────────────────────────────
 create index if not exists idx_children_group   on children("group");
 create index if not exists idx_children_section on children(section);
+
+-- ── Annonces : champ published ────────────────────────────────
+alter table announcements
+  add column if not exists published boolean not null default false;

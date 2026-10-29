@@ -35,7 +35,7 @@ function EspaceParent() {
     (async () => {
       // Each table is read on its own: one missing table never hides the others.
       const [n, m, a] = await Promise.all([
-        supabase.from("announcements").select("*").order("date", { ascending: false }).limit(10),
+        supabase.from("announcements").select("*").eq("published", true).order("date", { ascending: false }).limit(10),
         supabase.from("menus").select("*").eq("week_start", weekStart),
         supabase.from("activities").select("*"),
       ]);

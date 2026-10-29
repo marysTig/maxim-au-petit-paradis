@@ -28,6 +28,7 @@ export interface Announcement {
   title: string;
   body: string;
   date: string; // YYYY-MM-DD
+  published: boolean;
 }
 
 export type FinanceKind = "recette" | "subvention" | "depense";
@@ -90,6 +91,7 @@ export function dbToAnnouncement(r: Row): Announcement {
     title: str(r["title"]),
     body: str(r["body"]),
     date: str(r["date"]),
+    published: Boolean(r["published"]),
   };
 }
 export function announcementToDb(a: Announcement) {
@@ -98,5 +100,6 @@ export function announcementToDb(a: Announcement) {
     title: a.title,
     body: nul(a.body),
     date: a.date,
+    published: a.published ?? false,
   };
 }

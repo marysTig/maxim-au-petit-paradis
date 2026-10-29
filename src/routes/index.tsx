@@ -1,4 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
 // Brand SVG icons (inline)
 const IconPhone = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="size-5" aria-hidden="true">
@@ -197,6 +199,20 @@ function Flower({ className, style }: { className?: string; style?: React.CSSPro
 
 function Index() {
   const logoUrl = getSavedLogoUrl() ?? logo.url;
+  const [hasAnnouncements, setHasAnnouncements] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { count } = await supabase
+        .from("announcements")
+        .select("id", { count: "exact", head: true })
+        .eq("published", true);
+      if (!cancelled && (count ?? 0) > 0) setHasAnnouncements(true);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <div className="sky-bg relative min-h-screen overflow-hidden text-center">
       {/* Fond animé : calé sur la fenêtre pour rester visible partout */}
@@ -271,6 +287,21 @@ function Index() {
 
       <main className="relative z-10 mx-auto flex max-w-md flex-col gap-8 px-5 pb-28 pt-16">
         <img src={logoUrl} alt="Logo Maxim au Petit Paradis" className="mx-auto w-full max-w-xs rounded-[2rem] border-4 border-card shadow-xl" />
+
+        {hasAnnouncements && (
+          <Link
+            to="/espace-parent"
+            className="announcement-banner"
+            aria-label="Voir les annonces de la crèche dans l'espace parents"
+          >
+            <span className="announcement-bell">🔔</span>
+            <span className="announcement-text">
+              <strong>Nouvelles annonces !</strong>
+              <span>Consultez l'Espace Parents →</span>
+            </span>
+          </Link>
+        )}
+
         <p className="font-display text-lg font-medium text-foreground">
           Bienvenue à la crèche ! Appelez-nous, écrivez-nous ou suivez nos aventures.
         </p>
