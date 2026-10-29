@@ -776,7 +776,7 @@ function AdminDashboard() {
             crecheSections={crecheSections}
             onSave={saveSections}
           />
-
+        )}
 
         {!loading && !dbError && section === "reports" && (
           <ReportsSection
