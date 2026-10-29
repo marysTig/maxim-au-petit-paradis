@@ -29,10 +29,10 @@ export function addDays(dateStr: string, n: number): string {
   return localDateStr(d);
 }
 
-/** Monday of the week containing d, as local YYYY-MM-DD. */
+/** Dimanche de la semaine contenant d (semaine Dim–Jeu), au format local YYYY-MM-DD. */
 export function weekStartOf(d: Date): string {
   const copy = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const offset = (copy.getDay() + 6) % 7; // Monday = 0
+  const offset = copy.getDay(); // 0=Dim, 1=Lun, ..., 6=Sam → on revient au dimanche
   copy.setDate(copy.getDate() - offset);
   return localDateStr(copy);
 }

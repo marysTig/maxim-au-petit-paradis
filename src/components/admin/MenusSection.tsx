@@ -4,7 +4,7 @@ import type { MenuDay } from "../../lib/admin-extra";
 import { addDays, weekStartOf } from "../../lib/admin-helpers";
 import { card, inputStyle, labelStyle, PageHeader, softBtn } from "./ui";
 
-const DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"];
+const DAYS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi"];
 
 const MEALS: { key: "breakfast" | "lunch" | "snack"; label: string; icon: string }[] = [
   { key: "breakfast", label: "Petit-déjeuner", icon: "🥣" },

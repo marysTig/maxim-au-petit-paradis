@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type { Activity } from "../../lib/admin-extra";
 import { card, inputStyle, badge, PageHeader, Field, primaryBtn, dangerBtn, softBtn, uid } from "./ui";
 
-const DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"];
+const DAYS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi"];
 const SECTIONS = ["Bébés", "Moyens", "Grands", "Toutes"];
 
 type ActivityForm = Omit<Activity, "id">;

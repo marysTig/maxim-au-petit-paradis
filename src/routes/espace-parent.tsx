@@ -20,7 +20,7 @@ export const Route = createFileRoute("/espace-parent")({
   component: EspaceParent,
 });
 
-const DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"];
+const DAYS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi"];
 
 function EspaceParent() {
   const logoUrl = getSavedLogoUrl() ?? logo.url;
@@ -54,7 +54,9 @@ function EspaceParent() {
   const activitiesByDay = (day: number) =>
     activities.filter((a) => a.day === day).sort((x, y) => x.startTime.localeCompare(y.startTime));
   const hasMenu = menus.some((m) => m.breakfast || m.lunch || m.snack);
-  const today = (new Date().getDay() + 6) % 7; // Monday = 0
+  // Sunday=0, Monday=1, ..., Thursday=4 (work week Sun–Thu)
+  const jsDay = new Date().getDay(); // 0=Sun,1=Mon,...,6=Sat
+  const today = jsDay === 0 ? 0 : jsDay <= 4 ? jsDay : -1; // -1 = weekend, highlight nothing
 
   return (
     <div className="sky-bg relative min-h-screen overflow-hidden">
