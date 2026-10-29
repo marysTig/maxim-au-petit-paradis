@@ -312,6 +312,15 @@ function Index() {
           Bienvenue à la crèche ! Appelez-nous, écrivez-nous ou suivez nos aventures.
         </p>
 
+        <Section title="Espace Parents">
+          <Link to="/espace-parent" className="kid-btn bg-kid-violet">
+            <span className="relative z-10 flex items-center gap-3">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/25"><IconParents /></span>
+              <span className="flex-1 text-left">Annonces, menus &amp; activités</span>
+            </span>
+          </Link>
+        </Section>
+
         <Section title="Nous appeler">
           {PHONES.map((n, i) => (
             <LinkBtn key={n} href={`tel:+${toIntl(n)}`} color={i ? "bg-kid-violet" : "bg-kid-blue"} icon={<IconPhone />} label={n} />
@@ -328,15 +337,6 @@ function Index() {
           <LinkBtn external href="https://www.tiktok.com/@crche.maxim?_r=1&_t=ZS-9AhP45qkZFs" color="bg-kid-pink" icon={<IconTikTok />} label="TikTok" />
           <LinkBtn external href="https://www.facebook.com/share/1CbWm954Qr/" color="bg-kid-orange" icon={<IconFacebook />} label="Facebook" />
           <LinkBtn external href="mailto:maximecole06@gmail.com" color="bg-kid-blue" icon={<IconGmail />} label="maximecole06@gmail.com" />
-        </Section>
-
-        <Section title="Espace Parents">
-          <Link to="/espace-parent" className="kid-btn bg-kid-violet">
-            <span className="relative z-10 flex items-center gap-3">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/25"><IconParents /></span>
-              <span className="flex-1 text-left">Annonces, menus &amp; activités</span>
-            </span>
-          </Link>
         </Section>
 
       </main>
