@@ -499,10 +499,8 @@ function AdminDashboard() {
     { id: "parents", label: "Parents", icon: <Users size={20} /> },
     { id: "nanis", label: "Nanis", icon: <Heart size={20} /> },
     { id: "sections", label: "Section & Groupe", icon: <Layers size={20} /> },
-    { id: "menus", label: "Menus", icon: <UtensilsCrossed size={20} /> },
-    { id: "activities", label: "Activités", icon: <CalendarDays size={20} /> },
-    { id: "reports", label: "Rapports", icon: <BarChart3 size={20} /> },
     { id: "espace-parent", label: "Espace Parent", icon: <Home size={20} /> },
+    { id: "reports", label: "Rapports", icon: <BarChart3 size={20} /> },
     { id: "financement", label: "Financement", icon: <TrendingUp size={20} /> },
   ];
 
@@ -726,7 +724,7 @@ function AdminDashboard() {
           <ErrorBanner message={writeError} onClose={() => setWriteError(null)} />
         )}
 
-        {extrasMissing && !loading && !dbError && (section === "menus" || section === "activities" || section === "espace-parent") && (
+        {extrasMissing && !loading && !dbError && section === "espace-parent" && (
           <div style={{ ...card, marginBottom: "1rem", fontSize: "0.88rem", color: "oklch(0.45 0.10 270)" }}>
             ℹ️ Les tables Menus / Activités / Annonces n'existent pas encore. Exécutez{" "}
             <code>supabase_schema.sql</code> dans Supabase → SQL Editor, puis rechargez la page.
@@ -778,18 +776,8 @@ function AdminDashboard() {
             crecheSections={crecheSections}
             onSave={saveSections}
           />
-        )}
-        {!loading && !dbError && section === "menus" && (
-          <MenusSection menus={menus} setMenus={setMenus} onMenuUpsert={upsertMenu} />
-        )}
-        {!loading && !dbError && section === "activities" && (
-          <ActivitiesSection
-            activities={activities}
-            setActivities={setActivities}
-            onActivityUpsert={upsertActivity}
-            onActivityDelete={deleteActivityDb}
-          />
-        )}
+
+
         {!loading && !dbError && section === "reports" && (
           <ReportsSection
             children={children}
@@ -805,6 +793,13 @@ function AdminDashboard() {
             setAnnouncements={setAnnouncements}
             onAnnouncementUpsert={upsertAnnouncement}
             onAnnouncementDelete={deleteAnnouncementDb}
+            menus={menus}
+            setMenus={setMenus}
+            onMenuUpsert={upsertMenu}
+            activities={activities}
+            setActivities={setActivities}
+            onActivityUpsert={upsertActivity}
+            onActivityDelete={deleteActivityDb}
           />
         )}
         {!loading && !dbError && section === "financement" && (
