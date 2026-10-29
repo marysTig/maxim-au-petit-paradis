@@ -31,6 +31,12 @@ const IconGmail = () => (
 import { getSavedLogoUrl } from "@/lib/cloudinary";
 import logo from "@/assets/logo-maxim.jpeg.asset.json";
 
+const IconParents = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="size-5" aria-hidden="true">
+    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+  </svg>
+);
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -322,6 +328,15 @@ function Index() {
           <LinkBtn external href="https://www.tiktok.com/@crche.maxim?_r=1&_t=ZS-9AhP45qkZFs" color="bg-kid-pink" icon={<IconTikTok />} label="TikTok" />
           <LinkBtn external href="https://www.facebook.com/share/1CbWm954Qr/" color="bg-kid-orange" icon={<IconFacebook />} label="Facebook" />
           <LinkBtn external href="mailto:maximecole06@gmail.com" color="bg-kid-blue" icon={<IconGmail />} label="maximecole06@gmail.com" />
+        </Section>
+
+        <Section title="Espace Parents">
+          <Link to="/espace-parent" className="kid-btn bg-kid-violet">
+            <span className="relative z-10 flex items-center gap-3">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/25"><IconParents /></span>
+              <span className="flex-1 text-left">Annonces, menus &amp; activités</span>
+            </span>
+          </Link>
         </Section>
 
       </main>
