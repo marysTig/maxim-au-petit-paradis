@@ -496,7 +496,6 @@ function AdminDashboard() {
 
   const navItems: { id: Section; label: string; icon: React.ReactNode }[] = [
     { id: "children", label: "Enfants", icon: <Baby size={20} /> },
-    { id: "parents", label: "Parents", icon: <Users size={20} /> },
     { id: "nanis", label: "Nanis", icon: <Heart size={20} /> },
     { id: "sections", label: "Section & Groupe", icon: <Layers size={20} /> },
     { id: "espace-parent", label: "Espace Parent", icon: <Home size={20} /> },
@@ -750,16 +749,6 @@ function AdminDashboard() {
             child={selectedChild}
             parents={parents}
             onBack={() => navTo("children")}
-          />
-        )}
-        {!loading && !dbError && section === "parents" && (
-          <ParentsSection
-            parents={parents}
-            setParents={setParents}
-            children={children}
-            onParentAdded={upsertParent}
-            onParentRemoved={removeParentCascade}
-            onChildLinkChange={changeChildLink}
           />
         )}
         {!loading && !dbError && section === "nanis" && (
