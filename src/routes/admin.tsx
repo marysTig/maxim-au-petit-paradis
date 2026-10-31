@@ -355,17 +355,28 @@ function AdminDashboard() {
     localStorage.setItem("creche_finance", JSON.stringify(updated));
   }
 
-  /* -- Sections & groupes (localStorage) -- */
-  const [crecheSections, setCrecheSections] = useState<CrecheSection[]>(() => {
-    try {
-      const saved = localStorage.getItem("creche_sections");
-      return saved ? (JSON.parse(saved) as CrecheSection[]) : [];
-    } catch { return []; }
-  });
+  /* -- Sections & groupes (Supabase) -- */
+  const [crecheSections, setCrecheSections] = useState<CrecheSection[]>([]);
 
-  function saveSections(updated: CrecheSection[]) {
+  async function saveSections(updated: CrecheSection[]) {
     setCrecheSections(updated);
-    localStorage.setItem("creche_sections", JSON.stringify(updated));
+    // upsert added/changed
+    for (const s of updated) {
+      const old = crecheSections.find((x) => x.id === s.id);
+      if (!old || JSON.stringify(old) !== JSON.stringify(s)) {
+        const { error } = await supabase.from("creche_sections").upsert({
+          id: s.id, name: s.name, groups: s.groups,
+        });
+        if (error) reportWrite("section", error);
+      }
+    }
+    // delete removed
+    for (const old of crecheSections) {
+      if (!updated.find((s) => s.id === old.id)) {
+        const { error } = await supabase.from("creche_sections").delete().eq("id", old.id);
+        if (error) reportWrite("suppression section", error);
+      }
+    }
   }
 
   /* -- Nanis (Supabase) -- */
@@ -416,11 +427,12 @@ function AdminDashboard() {
     setLoading(true);
     setDbError(null);
     try {
-      const [c, p, nanisRes, presRes] = await Promise.all([
+      const [c, p, nanisRes, presRes, sectRes] = await Promise.all([
         supabase.from("children").select("*").order("created_at"),
         supabase.from("parents").select("*").order("created_at"),
         supabase.from("nanis").select("*").order("created_at"),
         supabase.from("nani_presences").select("*"),
+        supabase.from("creche_sections").select("*").order("created_at"),
       ]);
       if (c.error) throw c.error;
       if (p.error) throw p.error;
@@ -442,6 +454,13 @@ function AdminDashboard() {
           presMap[key] = (row.days as Record<string, string>) ?? {};
         }
         setNaniPresences(presMap);
+      }
+      if (!sectRes.error) {
+        setCrecheSections((sectRes.data ?? []).map((r) => ({
+          id: r.id as string,
+          name: r.name as string,
+          groups: (r.groups as SectionGroup[]) ?? [],
+        })));
       }
     } catch (err) {
       console.error("Supabase load error:", err);

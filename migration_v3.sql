@@ -172,3 +172,19 @@ create table if not exists nani_presences (
 alter table nani_presences enable row level security;
 drop policy if exists "allow_all_nani_presences" on nani_presences;
 create policy "allow_all_nani_presences" on nani_presences for all using (true) with check (true);
+
+
+-- ============================================================
+-- 10. TABLE CRECHE_SECTIONS
+--     groups: [{ id, name }]
+-- ============================================================
+create table if not exists creche_sections (
+  id         text primary key,
+  name       text not null,
+  groups     jsonb not null default '[]',
+  created_at timestamptz default now()
+);
+
+alter table creche_sections enable row level security;
+drop policy if exists "allow_all_creche_sections" on creche_sections;
+create policy "allow_all_creche_sections" on creche_sections for all using (true) with check (true);
