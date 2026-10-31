@@ -812,7 +812,6 @@ function AdminDashboard() {
             parentsCount={parents.length}
             nanisCount={nanis.length}
             presences={naniPresences}
-            finance={finance}
           />
         )}
         {!loading && !dbError && section === "espace-parent" && (

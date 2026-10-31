@@ -1,29 +1,24 @@
 import { useMemo, useState } from "react";
-import type { FinanceEntry } from "../../lib/admin-extra";
-import { buildReport, financeToCsv, localDateStr } from "../../lib/admin-helpers";
+import { buildReport, localDateStr } from "../../lib/admin-helpers";
 import type { DayStatus } from "../../lib/admin-helpers";
-import { card, inputStyle, labelStyle, PageHeader, EmptyState, primaryBtn, softBtn } from "./ui";
-
-export const CURRENCY = "€";
+import { card, inputStyle, labelStyle, PageHeader, EmptyState, softBtn } from "./ui";
 
 export function ReportsSection({
   children,
   parentsCount,
   nanisCount,
   presences,
-  finance,
 }: {
   children: { section: string }[];
   parentsCount: number;
   nanisCount: number;
   presences: Record<string, Record<string, DayStatus>>;
-  finance: FinanceEntry[];
 }) {
   const [month, setMonth] = useState(localDateStr().slice(0, 7));
 
   const report = useMemo(
-    () => buildReport({ children, presences, finance, month }),
-    [children, presences, finance, month]
+    () => buildReport({ children, presences, finance: [], month }),
+    [children, presences, month]
   );
 
   const monthLabel = useMemo(() => {
@@ -33,18 +28,6 @@ export function ReportsSection({
     return label.charAt(0).toUpperCase() + label.slice(1);
   }, [month]);
 
-  function exportCsv() {
-    const rows = finance.filter((e) => e.date.startsWith(month)).sort((a, b) => a.date.localeCompare(b.date));
-    const blob = new Blob(["﻿" + financeToCsv(rows)], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `financement-${month}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  const money = (n: number) => `${n.toLocaleString("fr-FR")} ${CURRENCY}`;
   const sectionRows = Object.entries(report.sectionCounts).sort(([a], [b]) => a.localeCompare(b, "fr"));
 
   const statCard = (icon: string, value: string | number, label: string, color: string) => (
@@ -62,12 +45,9 @@ export function ReportsSection({
         title="Rapports"
         subtitle={monthLabel}
         action={
-          <div className="no-print" style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <div className="no-print">
             <button onClick={() => window.print()} style={softBtn}>
               🖨️ Imprimer
-            </button>
-            <button onClick={exportCsv} style={primaryBtn}>
-              ⬇️ Exporter CSV
             </button>
           </div>
         }
@@ -83,25 +63,18 @@ export function ReportsSection({
         />
       </div>
 
-      {children.length === 0 && nanisCount === 0 && finance.length === 0 ? (
-        <EmptyState icon="📊" text="Ajoutez des enfants, des nanis ou des écritures de financement pour générer des rapports." />
+      {children.length === 0 && nanisCount === 0 ? (
+        <EmptyState icon="📊" text="Ajoutez des enfants ou des nanis pour générer des rapports." />
       ) : (
         <>
+          {/* Stat cards : enfants, parents, nanis */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "0.75rem", marginBottom: "1.25rem" }}>
             {statCard("👶", report.childCount, "Enfants", "oklch(0.52 0.22 260)")}
             {statCard("👨‍👩‍👧", parentsCount, "Parents", "oklch(0.52 0.22 310)")}
             {statCard("👩‍🍼", nanisCount, "Nanis", "oklch(0.55 0.20 340)")}
-            {statCard("✅", report.naniPresentDays, "Jours de présence nanis", "oklch(0.55 0.22 142)")}
-            {statCard("❌", report.naniAbsentDays, "Jours d'absence nanis", "oklch(0.55 0.20 27)")}
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "0.75rem", marginBottom: "1.25rem" }}>
-            {statCard("💶", money(report.finance.recette), "Recettes", "oklch(0.55 0.22 142)")}
-            {statCard("🏛️", money(report.finance.subvention), "Subventions", "oklch(0.52 0.22 260)")}
-            {statCard("🧾", money(report.finance.depense), "Dépenses", "oklch(0.55 0.20 27)")}
-            {statCard("⚖️", money(report.balance), "Solde du mois", report.balance >= 0 ? "oklch(0.45 0.20 142)" : "oklch(0.50 0.22 27)")}
-          </div>
-
+          {/* Enfants par section */}
           {sectionRows.length > 0 && (
             <div style={card}>
               <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.95rem", color: "oklch(0.40 0.10 270)", marginBottom: "0.75rem" }}>
