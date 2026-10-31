@@ -3,15 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { getSavedLogoUrl } from "@/lib/cloudinary";
 import logo from "@/assets/logo-maxim.jpeg.asset.json";
-import {
-  dbToActivity,
-  dbToAnnouncement,
-  dbToMenu,
-  type Activity,
-  type Announcement,
-  type MenuDay,
-} from "../lib/admin-extra";
-import { weekStartOf } from "../lib/admin-helpers";
+import { dbToAnnouncement, type Announcement } from "../lib/admin-extra";
 
 export const Route = createFileRoute("/espace-parent")({
   head: () => ({
@@ -20,43 +12,26 @@ export const Route = createFileRoute("/espace-parent")({
   component: EspaceParent,
 });
 
-const DAYS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi"];
-
 function EspaceParent() {
   const logoUrl = getSavedLogoUrl() ?? logo.url;
-  const weekStart = weekStartOf(new Date());
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [menus, setMenus] = useState<MenuDay[]>([]);
-  const [activities, setActivities] = useState<Activity[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // Each table is read on its own: one missing table never hides the others.
-      const [n, m, a] = await Promise.all([
-        supabase.from("announcements").select("*").eq("published", true).order("date", { ascending: false }).limit(10),
-        supabase.from("menus").select("*").eq("week_start", weekStart),
-        supabase.from("activities").select("*"),
-      ]);
+      const { data, error } = await supabase
+        .from("announcements")
+        .select("*")
+        .eq("published", true)
+        .order("date", { ascending: false })
+        .limit(10);
       if (cancelled) return;
-      if (!n.error) setAnnouncements((n.data ?? []).map((r) => dbToAnnouncement(r as Record<string, unknown>)));
-      if (!m.error) setMenus((m.data ?? []).map((r) => dbToMenu(r as Record<string, unknown>)));
-      if (!a.error) setActivities((a.data ?? []).map((r) => dbToActivity(r as Record<string, unknown>)));
+      if (!error) setAnnouncements((data ?? []).map((r) => dbToAnnouncement(r as Record<string, unknown>)));
       setLoaded(true);
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [weekStart]);
-
-  const menuByDay = (day: number) => menus.find((m) => m.day === day);
-  const activitiesByDay = (day: number) =>
-    activities.filter((a) => a.day === day).sort((x, y) => x.startTime.localeCompare(y.startTime));
-  const hasMenu = menus.some((m) => m.breakfast || m.lunch || m.snack);
-  // Sunday=0, Monday=1, ..., Thursday=4 (work week Sun–Thu)
-  const jsDay = new Date().getDay(); // 0=Sun,1=Mon,...,6=Sat
-  const today = jsDay === 0 ? 0 : jsDay <= 4 ? jsDay : -1; // -1 = weekend, highlight nothing
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <div className="sky-bg relative min-h-screen overflow-hidden">
@@ -89,58 +64,6 @@ function EspaceParent() {
                   {a.body && <p className="whitespace-pre-wrap text-sm">{a.body}</p>}
                 </article>
               ))}
-            </div>
-          )}
-        </section>
-
-        <section className="section-card">
-          <h2 className="section-title">🍽️ Menu de la semaine</h2>
-          {!hasMenu ? (
-            <p className="text-sm">Le menu de cette semaine n'est pas encore publié.</p>
-          ) : (
-            <div className="grid gap-2">
-              {DAYS.map((name, day) => {
-                const m = menuByDay(day);
-                if (!m || (!m.breakfast && !m.lunch && !m.snack)) return null;
-                return (
-                  <div
-                    key={day}
-                    className="rounded-2xl bg-white/70 p-3 text-left"
-                    style={day === today ? { outline: "2px solid currentColor" } : undefined}
-                  >
-                    <div className="font-display font-bold">{name}</div>
-                    {m.breakfast && <div className="text-sm">🥣 {m.breakfast}</div>}
-                    {m.lunch && <div className="text-sm">🍽️ {m.lunch}</div>}
-                    {m.snack && <div className="text-sm">🍎 {m.snack}</div>}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        <section className="section-card">
-          <h2 className="section-title">🎨 Activités de la semaine</h2>
-          {activities.length === 0 ? (
-            <p className="text-sm">Aucune activité planifiée pour le moment.</p>
-          ) : (
-            <div className="grid gap-2">
-              {DAYS.map((name, day) => {
-                const list = activitiesByDay(day);
-                if (list.length === 0) return null;
-                return (
-                  <div key={day} className="rounded-2xl bg-white/70 p-3 text-left">
-                    <div className="font-display font-bold">{name}</div>
-                    {list.map((a) => (
-                      <div key={a.id} className="text-sm">
-                        {a.startTime && `${a.startTime}${a.endTime ? `–${a.endTime}` : ""} · `}
-                        {a.title}
-                        {a.section !== "Toutes" && ` (${a.section})`}
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
             </div>
           )}
         </section>
