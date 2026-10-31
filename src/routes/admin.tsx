@@ -817,13 +817,6 @@ function AdminDashboard() {
             setAnnouncements={setAnnouncements}
             onAnnouncementUpsert={upsertAnnouncement}
             onAnnouncementDelete={deleteAnnouncementDb}
-            menus={menus}
-            setMenus={setMenus}
-            onMenuUpsert={upsertMenu}
-            activities={activities}
-            setActivities={setActivities}
-            onActivityUpsert={upsertActivity}
-            onActivityDelete={deleteActivityDb}
           />
         )}
         {!loading && !dbError && section === "paiement" && (
