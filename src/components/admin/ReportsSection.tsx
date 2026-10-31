@@ -3,6 +3,8 @@ import { buildReport, localDateStr } from "../../lib/admin-helpers";
 import type { DayStatus } from "../../lib/admin-helpers";
 import { card, inputStyle, labelStyle, PageHeader, EmptyState, softBtn } from "./ui";
 
+export const CURRENCY = "DA";
+
 export function ReportsSection({
   children,
   parentsCount,
