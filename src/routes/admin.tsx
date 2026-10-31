@@ -342,17 +342,28 @@ function AdminDashboard() {
   /* -- Paiements des enfants (Supabase, table `payments`) -- */
   const [payments, setPayments] = useState<Payment[]>([]);
 
-  /* -- Financement (localStorage) -- */
-  const [finance, setFinance] = useState<FinanceEntry[]>(() => {
-    try {
-      const saved = localStorage.getItem("creche_finance");
-      return saved ? (JSON.parse(saved) as FinanceEntry[]) : [];
-    } catch { return []; }
-  });
+  /* -- Financement (Supabase) -- */
+  const [finance, setFinance] = useState<FinanceEntry[]>([]);
 
-  function saveFinance(updated: FinanceEntry[]) {
+  async function saveFinance(updated: FinanceEntry[]) {
     setFinance(updated);
-    localStorage.setItem("creche_finance", JSON.stringify(updated));
+    // upsert added/changed
+    for (const e of updated) {
+      const old = finance.find((x) => x.id === e.id);
+      if (!old || JSON.stringify(old) !== JSON.stringify(e)) {
+        const { error } = await supabase.from("finance_entries").upsert({
+          id: e.id, kind: e.kind, label: e.label, amount: e.amount, date: e.date,
+        });
+        if (error) reportWrite("financement", error);
+      }
+    }
+    // delete removed
+    for (const old of finance) {
+      if (!updated.find((e) => e.id === old.id)) {
+        const { error } = await supabase.from("finance_entries").delete().eq("id", old.id);
+        if (error) reportWrite("suppression financement", error);
+      }
+    }
   }
 
   /* -- Sections & groupes (Supabase) -- */
@@ -427,12 +438,13 @@ function AdminDashboard() {
     setLoading(true);
     setDbError(null);
     try {
-      const [c, p, nanisRes, presRes, sectRes] = await Promise.all([
+      const [c, p, nanisRes, presRes, sectRes, finRes] = await Promise.all([
         supabase.from("children").select("*").order("created_at"),
         supabase.from("parents").select("*").order("created_at"),
         supabase.from("nanis").select("*").order("created_at"),
         supabase.from("nani_presences").select("*"),
         supabase.from("creche_sections").select("*").order("created_at"),
+        supabase.from("finance_entries").select("*").order("date"),
       ]);
       if (c.error) throw c.error;
       if (p.error) throw p.error;
@@ -460,6 +472,15 @@ function AdminDashboard() {
           id: r.id as string,
           name: r.name as string,
           groups: (r.groups as SectionGroup[]) ?? [],
+        })));
+      }
+      if (!finRes.error) {
+        setFinance((finRes.data ?? []).map((r) => ({
+          id: r.id as string,
+          kind: r.kind as FinanceKind,
+          label: r.label as string,
+          amount: Number(r.amount),
+          date: r.date as string,
         })));
       }
     } catch (err) {

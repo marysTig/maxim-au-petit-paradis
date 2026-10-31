@@ -188,3 +188,20 @@ create table if not exists creche_sections (
 alter table creche_sections enable row level security;
 drop policy if exists "allow_all_creche_sections" on creche_sections;
 create policy "allow_all_creche_sections" on creche_sections for all using (true) with check (true);
+
+
+-- ============================================================
+-- 11. TABLE FINANCE_ENTRIES
+-- ============================================================
+create table if not exists finance_entries (
+  id     text primary key,
+  kind   text not null check (kind in ('recette','subvention','depense')),
+  label  text not null,
+  amount numeric(12,2) not null default 0,
+  date   date not null,
+  created_at timestamptz default now()
+);
+
+alter table finance_entries enable row level security;
+drop policy if exists "allow_all_finance_entries" on finance_entries;
+create policy "allow_all_finance_entries" on finance_entries for all using (true) with check (true);

@@ -33,7 +33,7 @@ export interface Announcement {
 
 export type FinanceKind = "recette" | "subvention" | "depense";
 
-/** Financement entries are kept in localStorage, like Nanis and Sections. */
+/** FinanceEntry stored in Supabase table `finance_entries`. */
 export interface FinanceEntry {
   id: string;
   kind: FinanceKind;
