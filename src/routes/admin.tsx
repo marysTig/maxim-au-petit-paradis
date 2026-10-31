@@ -25,6 +25,7 @@ import {
   BarChart3,
   CreditCard,
   Settings,
+  Download,
 } from "lucide-react";
 import { EmptyState, ErrorBanner } from "../components/admin/ui";
 import { PaymentModal, isPaidFor, thisMonth } from "../components/admin/PaymentModal";
@@ -1127,6 +1128,39 @@ function ChildrenSection({
     Grands: "oklch(0.55 0.22 245)",
   };
 
+  function exportChildrenCsv() {
+    const headers = [
+      "Nom", "Prénom", "Actif", "Date de naissance", "Âge",
+      "Genre", "Nationalité", "Section", "Groupe",
+      "Nom mère", "Tél mère",
+      "Nom père", "Tél père",
+      "Situation familiale", "Nbre frères/sœurs",
+      "Allergies", "Notes",
+    ];
+    const rows = children.map((c) => {
+      const age = calcAge(c.birthDate);
+      const ageStr = age === null ? "" : age === 0 ? `${calcMonths(c.birthDate)} mois` : `${age} an${age > 1 ? "s" : ""}`;
+      return [
+        c.lastName, c.firstName,
+        c.active !== false ? "Oui" : "Non",
+        c.birthDate ? new Date(c.birthDate).toLocaleDateString("fr-FR") : "",
+        ageStr, c.gender, c.nationality, c.section, c.group,
+        c.motherName, c.motherPhone,
+        c.fatherName, c.fatherPhone,
+        c.familySituation, String(c.siblingsCount || ""),
+        c.allergies, c.notes,
+      ].map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";");
+    });
+    const csv = "\uFEFF" + [headers.join(";"), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `enfants-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div>
       <PageHeader
@@ -1134,27 +1168,35 @@ function ChildrenSection({
         title="Liste des enfants"
         count={children.length}
         action={
-          <button
-            onClick={() => setShowForm((v) => !v)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.4rem",
-              padding: "0.5rem 1rem",
-              borderRadius: "9999px",
-              border: "none",
-              cursor: "pointer",
-              background: "linear-gradient(135deg, oklch(0.60 0.22 310), oklch(0.52 0.22 260))",
-              color: "#fff",
-              fontFamily: "var(--font-display)",
-              fontWeight: 700,
-              fontSize: "0.9rem",
-              boxShadow: "0 3px 12px oklch(0.52 0.22 280 / .35)",
-            }}
-          >
-            <Plus size={16} />
-            Ajouter
-          </button>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            <button
+              onClick={exportChildrenCsv}
+              style={{
+                display: "flex", alignItems: "center", gap: "0.4rem",
+                padding: "0.5rem 1rem", borderRadius: "9999px", border: "none",
+                cursor: "pointer",
+                background: "linear-gradient(135deg, oklch(0.55 0.22 142), oklch(0.48 0.20 165))",
+                color: "#fff", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.9rem",
+                boxShadow: "0 3px 12px oklch(0.50 0.20 145 / .35)",
+              }}
+              title="Exporter la liste en CSV (Excel)"
+            >
+              <Download size={16} /> Exporter Excel
+            </button>
+            <button
+              onClick={() => setShowForm((v) => !v)}
+              style={{
+                display: "flex", alignItems: "center", gap: "0.4rem",
+                padding: "0.5rem 1rem", borderRadius: "9999px", border: "none",
+                cursor: "pointer",
+                background: "linear-gradient(135deg, oklch(0.60 0.22 310), oklch(0.52 0.22 260))",
+                color: "#fff", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.9rem",
+                boxShadow: "0 3px 12px oklch(0.52 0.22 280 / .35)",
+              }}
+            >
+              <Plus size={16} /> Ajouter
+            </button>
+          </div>
         }
       />
 
