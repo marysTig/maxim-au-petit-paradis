@@ -119,6 +119,7 @@ interface Child {
   parentIds: string[];
   allergies: string;
   notes: string;
+  active: boolean;
 }
 
 type Section =
@@ -262,6 +263,7 @@ function dbToChild(r: Record<string, unknown>): Child {
     parentIds: (r.parent_ids as string[]) ?? [],
     allergies: (r.allergies as string) ?? "",
     notes: (r.notes as string) ?? "",
+    active: r.active !== false, // default true for backward-compat
   };
 }
 function childToDb(c: Child) {
@@ -286,6 +288,7 @@ function childToDb(c: Child) {
     parent_ids: c.parentIds,
     allergies: c.allergies || null,
     notes: c.notes || null,
+    active: c.active,
   };
 }
 
@@ -1012,7 +1015,7 @@ function ChildrenSection({
     fatherName: "", fatherProfession: "", fatherPhone: "",
     siblingsCount: 0, familySituation: "",
     authorizedPersons: [{ name: "", firstName: "", phone: "" }, { name: "", firstName: "", phone: "" }] as AuthorizedPerson[],
-    parentIds: [], allergies: "", notes: "",
+    parentIds: [], allergies: "", notes: "", active: true,
   };
   const [form, setForm] = useState<Omit<Child, "id">>(emptyChild);
   const [search, setSearch] = useState("");
@@ -1423,7 +1426,7 @@ function ChildrenSection({
             className="children-table-header"
             style={{
               display: "grid",
-              gridTemplateColumns: "2fr 0.7fr 1.4fr 0.9fr 1.2fr 1.4fr 120px",
+              gridTemplateColumns: "2fr 0.55fr 0.7fr 1.4fr 0.9fr 1.2fr 1.4fr 120px",
               columnGap: "0.75rem",
               alignItems: "center",
               padding: "0.65rem 1.25rem",
@@ -1431,7 +1434,7 @@ function ChildrenSection({
               borderBottom: "1.5px solid oklch(0.85 0.05 265 / .5)",
             }}
           >
-            {["Nom & naissance", "Âge", "Section", "Groupe", "Allergies", "Note", ""].map((h) => (
+            {["Nom & naissance", "Actif", "Âge", "Section", "Groupe", "Allergies", "Note", ""].map((h) => (
               <div
                 key={h}
                 style={{
@@ -1468,7 +1471,7 @@ function ChildrenSection({
                   className="children-table-row"
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "2fr 0.7fr 1.4fr 0.9fr 1.2fr 1.4fr 120px",
+                    gridTemplateColumns: "2fr 0.55fr 0.7fr 1.4fr 0.9fr 1.2fr 1.4fr 120px",
                     columnGap: "0.75rem",
                     alignItems: "center",
                     padding: "0.75rem 1.25rem 0.5rem",
@@ -1485,6 +1488,22 @@ function ChildrenSection({
                         {new Date(child.birthDate).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
                       </div>
                     )}
+                  </div>
+
+                  {/* Actif */}
+                  <div style={{ minWidth: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <input
+                      type="checkbox"
+                      id={`active-${child.id}`}
+                      checked={child.active !== false}
+                      onChange={(e) => {
+                        const updated = { ...child, active: e.target.checked };
+                        setChildren((prev) => prev.map((c) => c.id === child.id ? updated : c));
+                        upsertChild(updated);
+                      }}
+                      style={{ width: 18, height: 18, accentColor: "oklch(0.60 0.22 142)", cursor: "pointer" }}
+                      title={child.active !== false ? "Actif — cliquer pour désactiver" : "Inactif — cliquer pour activer"}
+                    />
                   </div>
 
                   {/* Âge */}
