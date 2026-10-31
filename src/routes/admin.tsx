@@ -368,30 +368,47 @@ function AdminDashboard() {
     localStorage.setItem("creche_sections", JSON.stringify(updated));
   }
 
-  /* -- Nanis (localStorage) -- */
-  const [nanis, setNanis] = useState<Nani[]>(() => {
-    try {
-      const saved = localStorage.getItem("creche_nanis");
-      return saved ? (JSON.parse(saved) as Nani[]) : [];
-    } catch { return []; }
-  });
+  /* -- Nanis (Supabase) -- */
+  const [nanis, setNanis] = useState<Nani[]>([]);
 
-  function saveNanis(updated: Nani[]) {
+  async function saveNanis(updated: Nani[]) {
     setNanis(updated);
-    localStorage.setItem("creche_nanis", JSON.stringify(updated));
+    // upsert added/changed
+    for (const n of updated) {
+      const old = nanis.find((x) => x.id === n.id);
+      if (!old || JSON.stringify(old) !== JSON.stringify(n)) {
+        const { error } = await supabase.from("nanis").upsert({
+          id: n.id, first_name: n.firstName, last_name: n.lastName,
+          phone: n.phone ?? "", group: n.group ?? "",
+        });
+        if (error) reportWrite("nani", error);
+      }
+    }
+    // delete removed
+    for (const old of nanis) {
+      if (!updated.find((n) => n.id === old.id)) {
+        const { error } = await supabase.from("nanis").delete().eq("id", old.id);
+        if (error) reportWrite("suppression nani", error);
+      }
+    }
   }
 
-  /* -- Présences nanis (localStorage) -- */
-  const [naniPresences, setNaniPresences] = useState<NaniPresences>(() => {
-    try {
-      const saved = localStorage.getItem("creche_nani_presences");
-      return saved ? (JSON.parse(saved) as NaniPresences) : {};
-    } catch { return {}; }
-  });
+  /* -- Présences nanis (Supabase) -- */
+  const [naniPresences, setNaniPresences] = useState<NaniPresences>({});
 
-  function saveNaniPresences(updated: NaniPresences) {
+  async function saveNaniPresences(updated: NaniPresences) {
     setNaniPresences(updated);
-    localStorage.setItem("creche_nani_presences", JSON.stringify(updated));
+    // Upsert every key that changed
+    for (const key of Object.keys(updated)) {
+      const prev = naniPresences[key];
+      if (JSON.stringify(prev) === JSON.stringify(updated[key])) continue;
+      const [naniId, month] = key.split("::");
+      if (!naniId || !month) continue;
+      const { error } = await supabase
+        .from("nani_presences")
+        .upsert({ nani_id: naniId, month, days: updated[key] }, { onConflict: "nani_id,month" });
+      if (error) reportWrite("présence nani", error);
+    }
   }
 
   /* ── Initial load from Supabase ── */
@@ -399,14 +416,33 @@ function AdminDashboard() {
     setLoading(true);
     setDbError(null);
     try {
-      const [c, p] = await Promise.all([
+      const [c, p, nanisRes, presRes] = await Promise.all([
         supabase.from("children").select("*").order("created_at"),
         supabase.from("parents").select("*").order("created_at"),
+        supabase.from("nanis").select("*").order("created_at"),
+        supabase.from("nani_presences").select("*"),
       ]);
       if (c.error) throw c.error;
       if (p.error) throw p.error;
       setChildren((c.data ?? []).map(r => dbToChild(r as Record<string, unknown>)));
       setParents((p.data ?? []).map(r => dbToParent(r as Record<string, unknown>)));
+      if (!nanisRes.error) {
+        setNanis((nanisRes.data ?? []).map((r) => ({
+          id: r.id as string,
+          firstName: r.first_name as string,
+          lastName: r.last_name as string,
+          phone: (r.phone as string) ?? "",
+          group: (r.group as string) ?? "",
+        })));
+      }
+      if (!presRes.error) {
+        const presMap: NaniPresences = {};
+        for (const row of (presRes.data ?? [])) {
+          const key = `${row.nani_id}::${row.month}`;
+          presMap[key] = (row.days as Record<string, string>) ?? {};
+        }
+        setNaniPresences(presMap);
+      }
     } catch (err) {
       console.error("Supabase load error:", err);
       setDbError("Impossible de charger les données. Vérifiez votre connexion.");

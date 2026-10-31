@@ -138,3 +138,37 @@ values
   ('parent_space_password_enabled', 'false'),
   ('parent_space_password',         '')
 on conflict (key) do nothing;
+
+
+-- ============================================================
+-- 8. TABLE NANIS
+-- ============================================================
+create table if not exists nanis (
+  id         text primary key,
+  first_name text not null,
+  last_name  text not null,
+  phone      text not null default '',
+  "group"    text not null default '',
+  created_at timestamptz default now()
+);
+
+alter table nanis enable row level security;
+drop policy if exists "allow_all_nanis" on nanis;
+create policy "allow_all_nanis" on nanis for all using (true) with check (true);
+
+
+-- ============================================================
+-- 9. TABLE NANI_PRESENCES
+--    Une ligne par (nani × mois).
+--    days: { "YYYY-MM-DD": "present" | "absent" }
+-- ============================================================
+create table if not exists nani_presences (
+  nani_id text  not null,
+  month   text  not null,           -- format YYYY-MM
+  days    jsonb not null default '{}',
+  primary key (nani_id, month)
+);
+
+alter table nani_presences enable row level security;
+drop policy if exists "allow_all_nani_presences" on nani_presences;
+create policy "allow_all_nani_presences" on nani_presences for all using (true) with check (true);
