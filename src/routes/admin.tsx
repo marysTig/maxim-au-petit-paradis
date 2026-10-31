@@ -24,6 +24,7 @@ import {
   CalendarDays,
   BarChart3,
   CreditCard,
+  Settings,
 } from "lucide-react";
 import { EmptyState, ErrorBanner } from "../components/admin/ui";
 import { PaymentModal, isPaidFor, thisMonth } from "../components/admin/PaymentModal";
@@ -31,6 +32,7 @@ import { MenusSection } from "../components/admin/MenusSection";
 import { ActivitiesSection } from "../components/admin/ActivitiesSection";
 import { ReportsSection } from "../components/admin/ReportsSection";
 import { FinanceSection } from "../components/admin/FinanceSection";
+import { SettingsSection } from "../components/admin/SettingsSection";
 import { EspaceParentSection } from "../components/admin/EspaceParentSection";
 import { PaymentGridSection } from "../components/admin/PaymentGridSection";
 import {
@@ -133,7 +135,8 @@ type Section =
   | "reports"
   | "espace-parent"
   | "paiement"
-  | "financement";
+  | "financement"
+  | "parametres";
 
 interface SectionGroup {
   id: string;
@@ -534,6 +537,7 @@ function AdminDashboard() {
     { id: "reports", label: "Rapports", icon: <BarChart3 size={20} /> },
     { id: "paiement", label: "Paiements", icon: <CreditCard size={20} /> },
     { id: "financement", label: "Financement", icon: <TrendingUp size={20} /> },
+    { id: "parametres", label: "Paramètres", icon: <Settings size={20} /> },
   ];
 
 
@@ -828,6 +832,9 @@ function AdminDashboard() {
         )}
         {!loading && !dbError && section === "financement" && (
           <FinanceSection entries={finance} onSave={saveFinance} />
+        )}
+        {!loading && !dbError && section === "parametres" && (
+          <SettingsSection />
         )}
 
 
