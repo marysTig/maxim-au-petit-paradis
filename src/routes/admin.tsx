@@ -837,12 +837,8 @@ function AdminDashboard() {
           <ErrorBanner message={writeError} onClose={() => setWriteError(null)} />
         )}
 
-        {extrasMissing && !loading && !dbError && section === "espace-parent" && (
-          <div style={{ ...card, marginBottom: "1rem", fontSize: "0.88rem", color: "oklch(0.45 0.10 270)" }}>
-            ℹ️ Les tables Menus / Activités / Annonces n'existent pas encore. Exécutez{" "}
-            <code>supabase_schema.sql</code> dans Supabase → SQL Editor, puis rechargez la page.
-          </div>
-        )}
+
+
 
         {/* Sections */}
         {!loading && !dbError && section === "children" && (
