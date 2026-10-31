@@ -2571,51 +2571,73 @@ function NanisSection({
       const dayLabelCap = dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1);
 
       let statusText = "\u2014";
-      let bg = "#ffffff"; let txtColor = "#333"; let italic = "";
+      let bg = "#fff"; let txtColor = "#333"; let italic = "";
       if (status === "present")     { statusText = "Presente"; bg = "#e8f8ee"; txtColor = "#1a5c35"; }
       else if (status === "absent") { statusText = "Absente";  bg = "#fde8e8"; txtColor = "#7a1a1a"; }
-      else if (isWeekend)           { statusText = "Week-end"; bg = "#f5f5f8"; txtColor = "#888";    italic = "font-style:italic"; }
+      else if (isWeekend)           { statusText = "Week-end"; bg = "#f5f5f8"; txtColor = "#999";    italic = "font-style:italic"; }
 
-      return `<tr style="background:${bg}"><td style="padding:5px 10px;border-bottom:1px solid #e0e0e0;color:${txtColor};${italic}">${dayLabelCap}</td><td style="padding:5px 10px;border-bottom:1px solid #e0e0e0;font-weight:600;text-align:center;color:${txtColor};${italic}">${statusText}</td></tr>`;
+      return `<tr style="background:${bg}"><td style="padding:3px 8px;border-bottom:1px solid #e8e8e8;font-size:9pt;color:${txtColor};${italic}">${dayLabelCap}</td><td style="padding:3px 8px;border-bottom:1px solid #e8e8e8;font-size:9pt;font-weight:600;text-align:center;color:${txtColor};${italic};width:100px">${statusText}</td></tr>`;
     }).join("");
 
-    const css = `
-      @page{size:A4 landscape;margin:12mm 14mm}
-      *{box-sizing:border-box;margin:0;padding:0}
-      body{font-family:Arial,Helvetica,sans-serif;font-size:11pt;color:#1a1a1a;background:#fff}
-      .hdr{text-align:center;border-bottom:2px solid #4a3880;padding-bottom:8px;margin-bottom:14px}
-      .hdr h1{font-size:18pt;font-weight:700;letter-spacing:.04em;color:#2d1f6e}
-      .hdr .sub{font-size:11pt;color:#555;margin-top:4px}
-      .hdr .sub strong{color:#1a1a1a}
-      .sum{display:flex;gap:20px;margin-bottom:14px}
-      .sb{padding:6px 16px;border-radius:6px;font-weight:700;font-size:10pt}
-      .sp{background:#e8f8ee;color:#1a5c35;border:1px solid #b2dfcc}
-      .sa{background:#fde8e8;color:#7a1a1a;border:1px solid #f5b8b8}
-      table{width:100%;border-collapse:collapse;font-size:10pt;page-break-inside:avoid}
-      thead th{background:#2d1f6e;color:#fff;padding:7px 10px;text-align:left;font-size:9pt;text-transform:uppercase;letter-spacing:.06em}
-      thead th:last-child{text-align:center;width:130px}
-      td{vertical-align:middle}
-      .ftr{margin-top:14px;font-size:8pt;color:#aaa;text-align:right}
-      @media print{button,.no-print{display:none!important}body{padding:0}}
-    `;
-
-    const grp = nani.group ? ` &nbsp;|&nbsp; Groupe : ${nani.group}` : "";
+    const grp = nani.group ? ` | Groupe\u00a0: ${nani.group}` : "";
     const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
 <title>Presences ${nani.firstName} ${nani.lastName} - ${labelCap}</title>
-<style>${css}</style></head><body>
-<div class="hdr"><h1>Maxim Creche</h1>
-<div class="sub"><strong>Rapport de presence - ${nani.firstName} ${nani.lastName}</strong>${grp}<br>Periode : ${labelCap}</div></div>
-<div class="sum">
-  <span class="sb sp">${nPresent} jour${nPresent > 1 ? "s" : ""} present${nPresent > 1 ? "s" : ""}</span>
-  <span class="sb sa">${nAbsent} jour${nAbsent > 1 ? "s" : ""} absent${nAbsent > 1 ? "s" : ""}</span>
+<style>
+  @page { size: A4 landscape; margin: 8mm 10mm; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10pt; color: #1a1a1a; background: #fff;
+    /* reset everything that could cause phantom pages */
+    min-height: 0 !important; height: auto !important;
+    overflow: visible;
+  }
+  * { box-sizing: border-box; page-break-inside: auto; break-inside: auto; }
+  .wrap { padding: 0; margin: 0; }
+  .hdr { text-align: center; border-bottom: 2px solid #4a3880; padding-bottom: 6px; margin-bottom: 8px; }
+  .hdr h1 { font-size: 15pt; font-weight: 700; color: #2d1f6e; margin: 0 0 2px; letter-spacing: .04em; }
+  .hdr p  { font-size: 9.5pt; color: #444; margin: 0; }
+  .hdr strong { color: #111; }
+  .sum { display: flex; gap: 12px; margin-bottom: 8px; }
+  .sb { padding: 4px 12px; border-radius: 5px; font-weight: 700; font-size: 9pt; }
+  .sp { background: #e8f8ee; color: #1a5c35; border: 1px solid #b2dfcc; }
+  .sa { background: #fde8e8; color: #7a1a1a; border: 1px solid #f5b8b8; }
+  table { width: 100%; border-collapse: collapse; margin: 0; }
+  thead th {
+    background: #2d1f6e; color: #fff;
+    padding: 5px 8px; text-align: left;
+    font-size: 8pt; text-transform: uppercase; letter-spacing: .05em;
+  }
+  thead th:last-child { text-align: center; width: 100px; }
+  .ftr { margin-top: 8px; font-size: 7.5pt; color: #aaa; text-align: right; }
+  @media print {
+    html, body { margin: 0; padding: 0; min-height: 0; height: auto; }
+    .no-print, button { display: none !important; }
+    * { page-break-inside: auto !important; break-inside: auto !important; }
+    table { page-break-inside: auto; }
+    tr { page-break-inside: avoid; }
+  }
+</style>
+</head><body><div class="wrap">
+<div class="hdr">
+  <h1>Maxim Creche</h1>
+  <p><strong>Rapport de presence &ndash; ${nani.firstName} ${nani.lastName}</strong>${grp}</p>
+  <p>Periode : ${labelCap}</p>
 </div>
-<table><thead><tr><th>Jour</th><th style="text-align:center">Statut</th></tr></thead>
-<tbody>${rows}</tbody></table>
-<div class="ftr">Imprime le ${printedOn} &nbsp;|&nbsp; Maxim Creche</div>
+<div class="sum">
+  <span class="sb sp">${nPresent} jour${nPresent !== 1 ? "s" : ""} present${nPresent !== 1 ? "s" : ""}</span>
+  <span class="sb sa">${nAbsent} jour${nAbsent !== 1 ? "s" : ""} absent${nAbsent !== 1 ? "s" : ""}</span>
+</div>
+<table>
+  <thead><tr><th>Jour</th><th style="text-align:center">Statut</th></tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<div class="ftr">Imprime le ${printedOn} | Maxim Creche</div>
+</div>
 <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};};<\/script>
 </body></html>`;
 
-    const w = window.open("", "_blank", "width=950,height=700");
+    const w = window.open("", "_blank", "width=1000,height=750");
     w?.document.write(html);
     w?.document.close();
   }
