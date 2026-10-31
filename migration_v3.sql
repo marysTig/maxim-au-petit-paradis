@@ -113,3 +113,28 @@ create policy "allow_all_finance_entries" on finance_entries for all using (true
 
 drop policy if exists "allow_all_announcements"   on announcements;
 create policy "allow_all_announcements"   on announcements   for all using (true) with check (true);
+
+
+-- ============================================================
+-- 7. TABLE SETTINGS (parametres application, cle/valeur)
+--    Exemples de cles :
+--      parent_space_password_enabled  → "true" | "false"
+--      parent_space_password          → le mot de passe en clair
+-- ============================================================
+create table if not exists settings (
+  key        text primary key,
+  value      text not null default '',
+  updated_at timestamptz default now()
+);
+
+alter table settings enable row level security;
+
+drop policy if exists "allow_all_settings" on settings;
+create policy "allow_all_settings" on settings for all using (true) with check (true);
+
+-- Valeurs initiales (mot de passe desactive par defaut)
+insert into settings (key, value)
+values
+  ('parent_space_password_enabled', 'false'),
+  ('parent_space_password',         '')
+on conflict (key) do nothing;
