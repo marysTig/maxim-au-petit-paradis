@@ -2557,39 +2557,65 @@ function NanisSection({
     const map: Record<string, DayStatus> = presences[key] ?? {};
     const days = daysInMonth(month);
     const label = new Date(month + "-01").toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+    const labelCap = label.charAt(0).toUpperCase() + label.slice(1);
     const nPresent = Object.values(map).filter((s) => s === "present").length;
-    const nAbsent = Object.values(map).filter((s) => s === "absent").length;
+    const nAbsent  = Object.values(map).filter((s) => s === "absent").length;
+    const printedOn = new Date().toLocaleDateString("fr-FR");
 
     const rows = days.map((day) => {
-      const status = map[day] as DayStatus | undefined;
+      const status  = map[day] as DayStatus | undefined;
       const dayDate = new Date(day + "T12:00:00");
-      const isWeekend = dayDate.getDay() === 0 || dayDate.getDay() === 6;
-      const dayLabel = dayDate.toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long" });
-      const statusLabel = status === "present" ? "✅ Présente" : status === "absent" ? "❌ Absente" : isWeekend ? "🏖️ Week-end" : "—";
-      const bg = status === "present" ? "#d4f7e0" : status === "absent" ? "#fde8e8" : isWeekend ? "#f3f3f7" : "#fff";
-      const textStyle = isWeekend && !status ? "color:#aaa;font-style:italic" : "";
-      return `<tr style="background:${bg}"><td style="padding:6px 12px;border-bottom:1px solid #eee;text-transform:capitalize;${textStyle}">${dayLabel}</td><td style="padding:6px 12px;border-bottom:1px solid #eee;font-weight:700;text-align:center;${textStyle}">${statusLabel}</td></tr>`;
+      const jsDay   = dayDate.getDay();
+      const isWeekend = jsDay === 0 || jsDay === 5 || jsDay === 6;
+      const dayLabel  = dayDate.toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long" });
+      const dayLabelCap = dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1);
+
+      let statusText = "\u2014";
+      let bg = "#ffffff"; let txtColor = "#333"; let italic = "";
+      if (status === "present")     { statusText = "Presente"; bg = "#e8f8ee"; txtColor = "#1a5c35"; }
+      else if (status === "absent") { statusText = "Absente";  bg = "#fde8e8"; txtColor = "#7a1a1a"; }
+      else if (isWeekend)           { statusText = "Week-end"; bg = "#f5f5f8"; txtColor = "#888";    italic = "font-style:italic"; }
+
+      return `<tr style="background:${bg}"><td style="padding:5px 10px;border-bottom:1px solid #e0e0e0;color:${txtColor};${italic}">${dayLabelCap}</td><td style="padding:5px 10px;border-bottom:1px solid #e0e0e0;font-weight:600;text-align:center;color:${txtColor};${italic}">${statusText}</td></tr>`;
     }).join("");
 
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Présences ${nani.firstName} ${nani.lastName} — ${label}</title>
-    <style>body{font-family:system-ui,sans-serif;padding:2rem;color:#1a1a2e}h1{font-size:1.4rem;margin-bottom:0.25rem}h2{font-size:1rem;color:#666;font-weight:400;margin-bottom:1.5rem}
-    table{width:100%;border-collapse:collapse;font-size:0.9rem}th{background:#f5f0ff;padding:8px 12px;text-align:left;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:#6b5b95}
-    .stats{display:flex;gap:1.5rem;margin-bottom:1.5rem}.stat{padding:0.5rem 1rem;border-radius:8px;font-weight:700;font-size:0.9rem}
-    .stat-p{background:#d4f7e0;color:#1a6a3c}.stat-a{background:#fde8e8;color:#8b1a1a}
-    @media print{body{padding:0.5rem}}</style></head>
-    <body>
-    <h1>📅 ${nani.firstName} ${nani.lastName}</h1>
-    <h2>Présences — ${label}${nani.group ? ` • ${nani.group}` : ""}</h2>
-    <div class="stats">
-      <span class="stat stat-p">✅ ${nPresent} jour${nPresent > 1 ? "s" : ""} présente${nPresent > 1 ? "s" : ""}</span>
-      <span class="stat stat-a">❌ ${nAbsent} jour${nAbsent > 1 ? "s" : ""} absente${nAbsent > 1 ? "s" : ""}</span>
-    </div>
-    <table><thead><tr><th>Jour</th><th style="text-align:center">Statut</th></tr></thead><tbody>${rows}</tbody></table>
-    <p style="margin-top:1.5rem;font-size:0.75rem;color:#999">Imprimé le ${new Date().toLocaleDateString("fr-FR")}</p>
-    <script>window.print();window.onafterprint=()=>window.close();</script>
-    </body></html>`;
+    const css = `
+      @page{size:A4 landscape;margin:12mm 14mm}
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:Arial,Helvetica,sans-serif;font-size:11pt;color:#1a1a1a;background:#fff}
+      .hdr{text-align:center;border-bottom:2px solid #4a3880;padding-bottom:8px;margin-bottom:14px}
+      .hdr h1{font-size:18pt;font-weight:700;letter-spacing:.04em;color:#2d1f6e}
+      .hdr .sub{font-size:11pt;color:#555;margin-top:4px}
+      .hdr .sub strong{color:#1a1a1a}
+      .sum{display:flex;gap:20px;margin-bottom:14px}
+      .sb{padding:6px 16px;border-radius:6px;font-weight:700;font-size:10pt}
+      .sp{background:#e8f8ee;color:#1a5c35;border:1px solid #b2dfcc}
+      .sa{background:#fde8e8;color:#7a1a1a;border:1px solid #f5b8b8}
+      table{width:100%;border-collapse:collapse;font-size:10pt;page-break-inside:avoid}
+      thead th{background:#2d1f6e;color:#fff;padding:7px 10px;text-align:left;font-size:9pt;text-transform:uppercase;letter-spacing:.06em}
+      thead th:last-child{text-align:center;width:130px}
+      td{vertical-align:middle}
+      .ftr{margin-top:14px;font-size:8pt;color:#aaa;text-align:right}
+      @media print{button,.no-print{display:none!important}body{padding:0}}
+    `;
 
-    const w = window.open("", "_blank", "width=700,height=900");
+    const grp = nani.group ? ` &nbsp;|&nbsp; Groupe : ${nani.group}` : "";
+    const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
+<title>Presences ${nani.firstName} ${nani.lastName} - ${labelCap}</title>
+<style>${css}</style></head><body>
+<div class="hdr"><h1>Maxim Creche</h1>
+<div class="sub"><strong>Rapport de presence - ${nani.firstName} ${nani.lastName}</strong>${grp}<br>Periode : ${labelCap}</div></div>
+<div class="sum">
+  <span class="sb sp">${nPresent} jour${nPresent > 1 ? "s" : ""} present${nPresent > 1 ? "s" : ""}</span>
+  <span class="sb sa">${nAbsent} jour${nAbsent > 1 ? "s" : ""} absent${nAbsent > 1 ? "s" : ""}</span>
+</div>
+<table><thead><tr><th>Jour</th><th style="text-align:center">Statut</th></tr></thead>
+<tbody>${rows}</tbody></table>
+<div class="ftr">Imprime le ${printedOn} &nbsp;|&nbsp; Maxim Creche</div>
+<script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};};<\/script>
+</body></html>`;
+
+    const w = window.open("", "_blank", "width=950,height=700");
     w?.document.write(html);
     w?.document.close();
   }
