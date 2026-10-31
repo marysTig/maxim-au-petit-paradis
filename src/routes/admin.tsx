@@ -32,6 +32,7 @@ import { ActivitiesSection } from "../components/admin/ActivitiesSection";
 import { ReportsSection } from "../components/admin/ReportsSection";
 import { FinanceSection } from "../components/admin/FinanceSection";
 import { EspaceParentSection } from "../components/admin/EspaceParentSection";
+import { PaymentGridSection } from "../components/admin/PaymentGridSection";
 import {
   activityToDb,
   announcementToDb,
@@ -130,6 +131,7 @@ type Section =
   | "activities"
   | "reports"
   | "espace-parent"
+  | "paiement"
   | "financement";
 
 interface SectionGroup {
@@ -527,6 +529,7 @@ function AdminDashboard() {
     { id: "sections", label: "Section & Groupe", icon: <Layers size={20} /> },
     { id: "espace-parent", label: "Espace Parent", icon: <Home size={20} /> },
     { id: "reports", label: "Rapports", icon: <BarChart3 size={20} /> },
+    { id: "paiement", label: "Paiements", icon: <CreditCard size={20} /> },
     { id: "financement", label: "Financement", icon: <TrendingUp size={20} /> },
   ];
 
@@ -818,6 +821,13 @@ function AdminDashboard() {
             setActivities={setActivities}
             onActivityUpsert={upsertActivity}
             onActivityDelete={deleteActivityDb}
+          />
+        )}
+        {!loading && !dbError && section === "paiement" && (
+          <PaymentGridSection
+            children={children}
+            payments={payments}
+            onRecord={recordPayment}
           />
         )}
         {!loading && !dbError && section === "financement" && (
