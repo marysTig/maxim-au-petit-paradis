@@ -1593,7 +1593,7 @@ function ChildrenSection({
                   {/* Nom + Date naissance */}
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.95rem", color: "oklch(0.25 0.08 270)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {child.firstName} {child.lastName}
+                      {child.lastName} {child.firstName}
                     </div>
                     {child.birthDate && (
                       <div style={{ fontSize: "0.73rem", color: "oklch(0.55 0.06 260)", marginTop: "0.1rem", whiteSpace: "nowrap" }}>
@@ -2000,7 +2000,7 @@ function ChildrenSection({
                 </div>
                 <div>
                   <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: "1.3rem", color: "oklch(0.25 0.10 270)" }}>
-                    {mc.firstName} {mc.lastName}
+                    {mc.lastName} {mc.firstName}
                   </div>
                   <div style={{ fontSize: "0.82rem", color: "oklch(0.52 0.08 260)", marginTop: "0.2rem" }}>
                     {mc.section}{mc.group ? ` • ${mc.group}` : ""}
