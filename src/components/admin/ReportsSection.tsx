@@ -5,16 +5,20 @@ import { card, inputStyle, labelStyle, PageHeader, EmptyState, softBtn } from ".
 
 export const CURRENCY = "DA";
 
+interface CrecheSection { id: string; name: string }
+
 export function ReportsSection({
   children,
   parentsCount,
   nanisCount,
   presences,
+  crecheSections = [],
 }: {
   children: { section: string }[];
   parentsCount: number;
   nanisCount: number;
   presences: Record<string, Record<string, DayStatus>>;
+  crecheSections?: CrecheSection[];
 }) {
   const [month, setMonth] = useState(localDateStr().slice(0, 7));
 
@@ -30,7 +34,34 @@ export function ReportsSection({
     return label.charAt(0).toUpperCase() + label.slice(1);
   }, [month]);
 
-  const sectionRows = Object.entries(report.sectionCounts).sort(([a], [b]) => a.localeCompare(b, "fr"));
+  /**
+   * Si on connaît les sections officielles, on regroupe les enfants selon
+   * la liste de référence (Section & Groupe). Les enfants dont la section
+   * ne correspond plus à aucune section officielle sont comptés dans "Autre".
+   * Sinon on conserve le comportement historique (valeurs distinctes).
+   */
+  const sectionRows = useMemo(() => {
+    if (crecheSections.length > 0) {
+      const officialNames = new Set(crecheSections.map((s) => s.name));
+      const counts: Record<string, number> = {};
+      for (const s of crecheSections) counts[s.name] = 0;
+
+      let autreCount = 0;
+      for (const c of children) {
+        if (officialNames.has(c.section)) {
+          counts[c.section] = (counts[c.section] ?? 0) + 1;
+        } else {
+          autreCount++;
+        }
+      }
+
+      const rows = Object.entries(counts).sort(([a], [b]) => a.localeCompare(b, "fr"));
+      if (autreCount > 0) rows.push(["Autre", autreCount]);
+      return rows;
+    }
+    // Fallback : valeurs distinctes issues des enfants
+    return Object.entries(report.sectionCounts).sort(([a], [b]) => a.localeCompare(b, "fr"));
+  }, [children, crecheSections, report.sectionCounts]);
 
   const statCard = (icon: string, value: string | number, label: string, color: string) => (
     <div style={{ ...card, textAlign: "center", padding: "1.1rem" }}>

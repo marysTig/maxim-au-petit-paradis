@@ -934,6 +934,7 @@ function AdminDashboard() {
             parentsCount={parents.length}
             nanisCount={nanis.length}
             presences={naniPresences}
+            crecheSections={crecheSections}
           />
         )}
         {!loading && !dbError && section === "espace-parent" && (
