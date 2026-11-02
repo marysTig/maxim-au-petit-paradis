@@ -36,6 +36,7 @@ import { FinanceSection } from "../components/admin/FinanceSection";
 import { SettingsSection } from "../components/admin/SettingsSection";
 import { EspaceParentSection } from "../components/admin/EspaceParentSection";
 import { PaymentGridSection } from "../components/admin/PaymentGridSection";
+import { PreInscriptionSection, type PreInscrit } from "../components/admin/PreInscriptionSection";
 import {
   activityToDb,
   announcementToDb,
@@ -127,6 +128,7 @@ interface Child {
 
 type Section =
   | "children"
+  | "pre-inscription"
   | "profile"
   | "parents"
   | "nanis"
@@ -342,6 +344,9 @@ function AdminDashboard() {
   /* -- Paiements des enfants (Supabase, table `payments`) -- */
   const [payments, setPayments] = useState<Payment[]>([]);
 
+  /* -- Pré-inscriptions (Supabase, table `pre_inscriptions`) -- */
+  const [preInscrits, setPreInscrits] = useState<PreInscrit[]>([]);
+
   /* -- Financement (Supabase) -- */
   const [finance, setFinance] = useState<FinanceEntry[]>([]);
 
@@ -433,6 +438,49 @@ function AdminDashboard() {
     }
   }
 
+  /* ── Pré-inscriptions: chargées à part pour ne jamais bloquer le reste ── */
+  const fetchPreInscrits = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("pre_inscriptions")
+      .select("*")
+      .order("created_at");
+    if (error) {
+      console.error("Supabase pre_inscriptions load error:", error);
+      return;
+    }
+    setPreInscrits(
+      (data ?? []).map((r) => ({
+        id: r.id as string,
+        lastName: r.last_name as string,
+        firstName: r.first_name as string,
+        birthDate: (r.birth_date as string) ?? "",
+        anneeScolaire: (r.annee_scolaire as string) ?? "",
+        montant: Number(r.montant ?? 0),
+        datePaiement: (r.date_paiement as string) ?? "",
+      }))
+    );
+  }, []);
+
+  async function savePreInscrit(p: PreInscrit) {
+    setPreInscrits((prev) => [...prev.filter((x) => x.id !== p.id), p]);
+    const { error } = await supabase.from("pre_inscriptions").upsert({
+      id: p.id,
+      last_name: p.lastName,
+      first_name: p.firstName,
+      birth_date: p.birthDate || null,
+      annee_scolaire: p.anneeScolaire,
+      montant: p.montant,
+      date_paiement: p.datePaiement,
+    });
+    if (error) reportWrite("pré-inscription", error);
+  }
+
+  async function deletePreInscrit(id: string) {
+    setPreInscrits((prev) => prev.filter((x) => x.id !== id));
+    const { error } = await supabase.from("pre_inscriptions").delete().eq("id", id);
+    if (error) reportWrite("suppression pré-inscription", error);
+  }
+
   /* ── Initial load from Supabase ── */
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -516,7 +564,7 @@ function AdminDashboard() {
     setPayments((data ?? []).map((r) => dbToPayment(r as Record<string, unknown>)));
   }, []);
 
-  useEffect(() => { fetchAll(); fetchExtras(); fetchPayments(); }, [fetchAll, fetchExtras, fetchPayments]);
+  useEffect(() => { fetchAll(); fetchExtras(); fetchPayments(); fetchPreInscrits(); }, [fetchAll, fetchExtras, fetchPayments, fetchPreInscrits]);
 
   /* ── Write errors surfaced to the user ── */
   function reportWrite(label: string, error: unknown) {
@@ -608,6 +656,7 @@ function AdminDashboard() {
 
   const navItems: { id: Section; label: string; icon: React.ReactNode }[] = [
     { id: "children", label: "Enfants", icon: <Baby size={20} /> },
+    { id: "pre-inscription", label: "Pré-inscription", icon: <ChevronRight size={20} /> },
     { id: "nanis", label: "Nanis", icon: <Heart size={20} /> },
     { id: "sections", label: "Section & Groupe", icon: <Layers size={20} /> },
     { id: "espace-parent", label: "Espace Parent", icon: <Home size={20} /> },
@@ -900,6 +949,13 @@ function AdminDashboard() {
             children={children}
             payments={payments}
             onRecord={recordPayment}
+          />
+        )}
+        {!loading && !dbError && section === "pre-inscription" && (
+          <PreInscriptionSection
+            preInscrits={preInscrits}
+            onSave={savePreInscrit}
+            onDelete={deletePreInscrit}
           />
         )}
         {!loading && !dbError && section === "financement" && (
