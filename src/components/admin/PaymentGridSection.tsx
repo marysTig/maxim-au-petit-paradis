@@ -59,6 +59,7 @@ export function PaymentGridSection({ children, payments, onRecord }: Props) {
   const [activeCell,   setActiveCell]   = useState<{ childId: string; mk: string } | null>(null);
   const [dateInput,    setDateInput]    = useState("");
   const [amountInput,  setAmountInput]  = useState("");
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null); // null = tous les mois
 
   /* ── Filtres ── */
   const [search,        setSearch]        = useState("");
@@ -129,9 +130,23 @@ export function PaymentGridSection({ children, payments, onRecord }: Props) {
     setActiveCell(null);
   }
 
-  const totalPaid    = payments.filter((p) => p.status === "paid").length;
-  const totalPending = payments.filter((p) => p.status === "pending").length;
-  const totalLate    = payments.filter((p) => p.status === "late").length;
+  /* ── Statistiques : filtrées sur l'année scolaire sélectionnée + mois choisi ── */
+  const schoolMonthKeys = useMemo(
+    () => SCHOOL_MONTHS.map(({ m }) => monthKey(schoolYear, m)),
+    [schoolYear]
+  );
+
+  const statsForMonth = useMemo(() => {
+    const keys = selectedMonth !== null
+      ? [monthKey(schoolYear, selectedMonth)]
+      : schoolMonthKeys;
+    const scope = payments.filter((p) => keys.includes(p.month));
+    return {
+      paid:    scope.filter((p) => p.status === "paid").length,
+      pending: scope.filter((p) => p.status === "pending").length,
+      late:    scope.filter((p) => p.status === "late").length,
+    };
+  }, [payments, schoolYear, schoolMonthKeys, selectedMonth]);
 
   function cellColor(p: Payment | undefined) {
     if (!p || p.status === "pending") return { bg: "oklch(0.94 0.02 260)", color: "oklch(0.55 0.06 260)" };
@@ -173,16 +188,48 @@ export function PaymentGridSection({ children, payments, onRecord }: Props) {
         action={undefined}
       />
 
+      {/* Sélecteur de mois pour les stats */}
+      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.75rem", alignItems: "center" }}>
+        <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "oklch(0.45 0.08 260)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Stats du mois :</span>
+        <button
+          onClick={() => setSelectedMonth(null)}
+          style={{
+            padding: "0.3rem 0.75rem", borderRadius: "9999px", border: "none", cursor: "pointer",
+            fontWeight: selectedMonth === null ? 700 : 500, fontSize: "0.78rem",
+            background: selectedMonth === null ? "linear-gradient(135deg, oklch(0.60 0.22 310), oklch(0.52 0.22 260))" : "oklch(0.90 0.03 265)",
+            color: selectedMonth === null ? "#fff" : "oklch(0.45 0.08 265)",
+          }}
+        >
+          Toute l'année
+        </button>
+        {SCHOOL_MONTHS.map(({ label, m }) => (
+          <button
+            key={m}
+            onClick={() => setSelectedMonth(m)}
+            style={{
+              padding: "0.3rem 0.65rem", borderRadius: "9999px", border: "none", cursor: "pointer",
+              fontWeight: selectedMonth === m ? 700 : 500, fontSize: "0.78rem",
+              background: selectedMonth === m ? "linear-gradient(135deg, oklch(0.60 0.22 310), oklch(0.52 0.22 260))" : "oklch(0.90 0.03 265)",
+              color: selectedMonth === m ? "#fff" : "oklch(0.45 0.08 265)",
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* Statistiques */}
       <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1.25rem" }}>
         {[
-          { label: "Payés",       value: totalPaid,    color: "oklch(0.88 0.14 142)", text: "oklch(0.28 0.12 142)" },
-          { label: "En attente",  value: totalPending, color: "oklch(0.93 0.06 70)",  text: "oklch(0.45 0.12 70)"  },
-          { label: "En retard",   value: totalLate,    color: "oklch(0.92 0.14 27)",  text: "oklch(0.40 0.18 27)"  },
+          { label: "Payés",       value: statsForMonth.paid,    color: "oklch(0.88 0.14 142)", text: "oklch(0.28 0.12 142)" },
+          { label: "En attente",  value: statsForMonth.pending, color: "oklch(0.93 0.06 70)",  text: "oklch(0.45 0.12 70)"  },
+          { label: "En retard",   value: statsForMonth.late,    color: "oklch(0.92 0.14 27)",  text: "oklch(0.40 0.18 27)"  },
         ].map((s) => (
           <div key={s.label} style={{ flex: 1, minWidth: "110px", background: s.color, borderRadius: "1rem", padding: "0.75rem 1rem", display: "flex", flexDirection: "column", gap: "0.1rem" }}>
             <span style={{ fontSize: "1.5rem", fontWeight: 800, color: s.text, lineHeight: 1 }}>{s.value}</span>
-            <span style={{ fontSize: "0.78rem", fontWeight: 600, color: s.text, opacity: 0.8 }}>{s.label}</span>
+            <span style={{ fontSize: "0.78rem", fontWeight: 600, color: s.text, opacity: 0.8 }}>
+              {s.label}{selectedMonth !== null ? ` — ${SCHOOL_MONTHS.find(x => x.m === selectedMonth)?.label}` : " — Toute l'année"}
+            </span>
           </div>
         ))}
       </div>
