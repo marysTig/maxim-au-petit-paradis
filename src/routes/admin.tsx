@@ -182,9 +182,14 @@ export const Route = createFileRoute("/admin")({
   beforeLoad: () => {
     // On the server (SSR), sessionStorage doesn't exist → always redirect to login.
     // On the client, redirect if the auth flag is missing.
-    const isAuthenticated =
-      typeof sessionStorage !== "undefined" &&
-      sessionStorage.getItem(AUTH_KEY) === "true";
+    let isAuthenticated = false;
+    try {
+      isAuthenticated =
+        typeof sessionStorage !== "undefined" &&
+        sessionStorage.getItem(AUTH_KEY) === "true";
+    } catch {
+      isAuthenticated = false;
+    }
     if (!isAuthenticated) {
       throw redirect({ to: "/accullie" });
     }
