@@ -31,7 +31,7 @@ export interface PreInscrit {
 /* ─────────────────────────────────────────────
    HELPERS
 ───────────────────────────────────────────── */
-const CURRENCY = "FCFA";
+const CURRENCY = "DA";
 
 function money(n: number) {
   return `${n.toLocaleString("fr-FR")} ${CURRENCY}`;

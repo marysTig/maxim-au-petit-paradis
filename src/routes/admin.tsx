@@ -2756,6 +2756,43 @@ function NanisSection({
   const [payForm, setPayForm] = useState(emptyPayForm);
   const [editPayId, setEditPayId] = useState<string | null>(null);
 
+  function formatNaniPeriode(type: NaniPaymentPeriode, ref: string): string {
+    if (!ref) return "—";
+    try {
+      if (type === "mois") {
+        const [y, m] = ref.split("-").map(Number);
+        if (y && m) {
+          const d = new Date(y, m - 1, 1);
+          if (!isNaN(d.getTime())) {
+            return d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+          }
+        }
+        return ref;
+      }
+      const d = new Date(ref.includes("T") ? ref : `${ref}T12:00:00`);
+      if (!isNaN(d.getTime())) {
+        const formatted = d.toLocaleDateString("fr-FR");
+        return type === "semaine" ? `Semaine du ${formatted}` : formatted;
+      }
+      return ref;
+    } catch {
+      return ref;
+    }
+  }
+
+  function formatNaniDate(dateStr: string): string {
+    if (!dateStr) return "";
+    try {
+      const d = new Date(dateStr.includes("T") ? dateStr : `${dateStr}T12:00:00`);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString("fr-FR");
+      }
+      return dateStr;
+    } catch {
+      return dateStr;
+    }
+  }
+
   // Tous les groupes disponibles
   const allGroups = crecheSections.flatMap((s) => s.groups);
 
@@ -3179,7 +3216,17 @@ function NanisSection({
                             <select
                               style={inputStyle}
                               value={payForm.periodeType}
-                              onChange={(e) => setPayForm((f) => ({ ...f, periodeType: e.target.value as NaniPaymentPeriode }))}
+                              onChange={(e) => {
+                                const newType = e.target.value as NaniPaymentPeriode;
+                                setPayForm((f) => {
+                                  const now = new Date();
+                                  const defaultRef =
+                                    newType === "mois"
+                                      ? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+                                      : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+                                  return { ...f, periodeType: newType, periodeRef: defaultRef };
+                                });
+                              }}
                             >
                               <option value="jour">Jour</option>
                               <option value="semaine">Semaine</option>
@@ -3216,7 +3263,7 @@ function NanisSection({
                             </select>
                           </Field>
                           {/* Montant dû */}
-                          <Field label="Montant à payer (FCFA)">
+                          <Field label="Montant à payer (DA)">
                             <input
                               style={inputStyle}
                               type="number"
@@ -3228,7 +3275,7 @@ function NanisSection({
                             />
                           </Field>
                           {/* Montant versé */}
-                          <Field label="Montant versé (FCFA)">
+                          <Field label="Montant versé (DA)">
                             <input
                               style={inputStyle}
                               type="number"
@@ -3253,7 +3300,7 @@ function NanisSection({
                             <input
                               style={inputStyle}
                               type="text"
-                              placeholder="Ex : avance de 50 000 FCFA…"
+                              placeholder="Ex : avance de 5 000 DA…"
                               value={payForm.remarque}
                               onChange={(e) => setPayForm((f) => ({ ...f, remarque: e.target.value }))}
                             />
@@ -3318,13 +3365,11 @@ function NanisSection({
                               ? { bg: "oklch(0.75 0.14 70 / .15)", text: "oklch(0.45 0.16 70)", border: "oklch(0.65 0.16 70 / .4)" }
                               : { bg: "oklch(0.577 0.245 27 / .08)", text: "oklch(0.50 0.22 27)", border: "oklch(0.577 0.245 27 / .3)" };
                           const statutLabel = p.statut === "paye" ? "Payé" : p.statut === "partiel" ? "Partiel" : "Non payé";
-                          const periodeLabel =
-                            p.periodeType === "mois"
-                              ? new Date(p.periodeRef + "-01").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
-                              : p.periodeType === "semaine"
-                              ? `Semaine du ${new Date(p.periodeRef + "T12:00:00").toLocaleDateString("fr-FR")}`
-                              : new Date(p.periodeRef + "T12:00:00").toLocaleDateString("fr-FR");
-                          const reste = p.montantDu - p.montantVerse;
+                          const periodeLabel = formatNaniPeriode(p.periodeType, p.periodeRef);
+                          const montantDu = typeof p.montantDu === "number" ? p.montantDu : Number(p.montantDu) || 0;
+                          const montantVerse = typeof p.montantVerse === "number" ? p.montantVerse : Number(p.montantVerse) || 0;
+                          const reste = montantDu - montantVerse;
+                          const datePaiementStr = formatNaniDate(p.datePaiement);
 
                           return (
                             <div
@@ -3354,14 +3399,14 @@ function NanisSection({
                                   {periodeLabel}
                                 </div>
                                 <div style={{ fontSize: "0.75rem", color: "oklch(0.50 0.07 265)", marginTop: "0.1rem" }}>
-                                  Dû : <strong>{p.montantDu.toLocaleString("fr-FR")} FCFA</strong>
+                                  Dû : <strong>{montantDu.toLocaleString("fr-FR")} DA</strong>
                                   {" · "}
-                                  Versé : <strong>{p.montantVerse.toLocaleString("fr-FR")} FCFA</strong>
-                                  {reste > 0 && <span style={{ color: "oklch(0.50 0.22 27)", fontWeight: 700 }}> · Reste : {reste.toLocaleString("fr-FR")} FCFA</span>}
+                                  Versé : <strong>{montantVerse.toLocaleString("fr-FR")} DA</strong>
+                                  {reste > 0 && <span style={{ color: "oklch(0.50 0.22 27)", fontWeight: 700 }}> · Reste : {reste.toLocaleString("fr-FR")} DA</span>}
                                 </div>
-                                {p.datePaiement && (
+                                {datePaiementStr && (
                                   <div style={{ fontSize: "0.72rem", color: "oklch(0.60 0.06 265)", marginTop: "0.08rem" }}>
-                                    📅 {new Date(p.datePaiement + "T12:00:00").toLocaleDateString("fr-FR")}
+                                    📅 {datePaiementStr}
                                   </div>
                                 )}
                                 {p.remarque && (
