@@ -44,13 +44,18 @@ import {
   dbToAnnouncement,
   dbToMenu,
   dbToPayment,
+  dbToNaniPayment,
   menuToDb,
   paymentToDb,
+  naniPaymentToDb,
   type Activity,
   type Announcement,
   type FinanceEntry,
   type MenuDay,
   type Payment,
+  type NaniPayment,
+  type NaniPaymentStatut,
+  type NaniPaymentPeriode,
 } from "../lib/admin-extra";
 
 /* ─────────────────────────────────────────────
@@ -438,6 +443,30 @@ function AdminDashboard() {
     }
   }
 
+  /* -- Paiements nanis (Supabase, table `nani_payments`) -- */
+  const [naniPayments, setNaniPayments] = useState<NaniPayment[]>([]);
+
+  const fetchNaniPayments = useCallback(async () => {
+    const { data, error } = await supabase.from("nani_payments").select("*").order("created_at");
+    if (error) {
+      console.error("Supabase nani_payments load error:", error);
+      return;
+    }
+    setNaniPayments((data ?? []).map((r) => dbToNaniPayment(r as Record<string, unknown>)));
+  }, []);
+
+  async function saveNaniPayment(p: NaniPayment) {
+    setNaniPayments((prev) => [...prev.filter((x) => x.id !== p.id), p]);
+    const { error } = await supabase.from("nani_payments").upsert(naniPaymentToDb(p));
+    if (error) reportWrite("paiement nani", error);
+  }
+
+  async function deleteNaniPayment(id: string) {
+    setNaniPayments((prev) => prev.filter((x) => x.id !== id));
+    const { error } = await supabase.from("nani_payments").delete().eq("id", id);
+    if (error) reportWrite("suppression paiement nani", error);
+  }
+
   /* ── Pré-inscriptions: chargées à part pour ne jamais bloquer le reste ── */
   const fetchPreInscrits = useCallback(async () => {
     const { data, error } = await supabase
@@ -564,7 +593,7 @@ function AdminDashboard() {
     setPayments((data ?? []).map((r) => dbToPayment(r as Record<string, unknown>)));
   }, []);
 
-  useEffect(() => { fetchAll(); fetchExtras(); fetchPayments(); fetchPreInscrits(); }, [fetchAll, fetchExtras, fetchPayments, fetchPreInscrits]);
+  useEffect(() => { fetchAll(); fetchExtras(); fetchPayments(); fetchPreInscrits(); fetchNaniPayments(); }, [fetchAll, fetchExtras, fetchPayments, fetchPreInscrits, fetchNaniPayments]);
 
   /* ── Write errors surfaced to the user ── */
   function reportWrite(label: string, error: unknown) {
@@ -919,6 +948,9 @@ function AdminDashboard() {
             presences={naniPresences}
             onSavePresences={saveNaniPresences}
             crecheSections={crecheSections}
+            naniPayments={naniPayments}
+            onSaveNaniPayment={saveNaniPayment}
+            onDeleteNaniPayment={deleteNaniPayment}
           />
         )}
         {!loading && !dbError && section === "sections" && (
@@ -2687,12 +2719,16 @@ export function ParentsSection({
 ───────────────────────────────────────────── */
 function NanisSection({
   nanis, onSaveNanis, presences, onSavePresences, crecheSections,
+  naniPayments, onSaveNaniPayment, onDeleteNaniPayment,
 }: {
   nanis: Nani[];
   onSaveNanis: (n: Nani[]) => void;
   presences: NaniPresences;
   onSavePresences: (p: NaniPresences) => void;
   crecheSections: CrecheSection[];
+  naniPayments: NaniPayment[];
+  onSaveNaniPayment: (p: NaniPayment) => void;
+  onDeleteNaniPayment: (id: string) => void;
 }) {
   const [tab, setTab] = useState<"ajouter" | "liste" | "paiement">("liste");
   const [form, setForm] = useState<Omit<Nani, "id">>({ firstName: "", lastName: "", phone: "", group: "" });
@@ -2700,6 +2736,20 @@ function NanisSection({
   const [dayPicker, setDayPicker] = useState<{ naniId: string; month: string; day: string } | null>(null);
   const [printPicker, setPrintPicker] = useState<{ nani: Nani } | null>(null);
   const [editNaniId, setEditNaniId] = useState<string | null>(null);
+
+  /* ── Payment form state ── */
+  const [paymentFormNaniId, setPaymentFormNaniId] = useState<string | null>(null);
+  const emptyPayForm = {
+    periodeType: "mois" as NaniPaymentPeriode,
+    periodeRef: (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`; })(),
+    montantDu: "" as string | number,
+    montantVerse: "" as string | number,
+    statut: "non_paye" as NaniPaymentStatut,
+    remarque: "",
+    datePaiement: "",
+  };
+  const [payForm, setPayForm] = useState(emptyPayForm);
+  const [editPayId, setEditPayId] = useState<string | null>(null);
 
   // Tous les groupes disponibles
   const allGroups = crecheSections.flatMap((s) => s.groups);
@@ -3032,46 +3082,322 @@ function NanisSection({
                 const key2 = `${n.id}::${currentMonth}`;
                 const map2 = presences[key2] ?? {};
                 const nAbsent = Object.values(map2).filter((s) => s === "absent").length;
+                const isPayFormOpen = paymentFormNaniId === n.id;
+
+                // Paiements de cette nani
+                const naniPays = naniPayments
+                  .filter((p) => p.naniId === n.id)
+                  .sort((a, b) => (b.periodeRef > a.periodeRef ? 1 : -1));
+
                 return (
-                  <div key={n.id} style={{ ...card, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
-                    <div>
-                      <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.95rem", color: "oklch(0.28 0.08 270)" }}>
-                        {n.firstName} {n.lastName}
+                  <div key={n.id} style={{ ...card, display: "flex", flexDirection: "column", gap: "1rem" }}>
+                    {/* ── En-tête nani ── */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem" }}>
+                      <div>
+                        <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.95rem", color: "oklch(0.28 0.08 270)" }}>
+                          {n.firstName} {n.lastName}
+                        </div>
+                        {n.group && <div style={{ fontSize: "0.78rem", color: "oklch(0.55 0.07 260)", marginTop: "0.15rem" }}>{n.group}</div>}
                       </div>
-                      {n.group && <div style={{ fontSize: "0.78rem", color: "oklch(0.55 0.07 260)", marginTop: "0.15rem" }}>{n.group}</div>}
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", gap: "0.4rem" }}>
+                          <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "oklch(0.42 0.20 142)", background: "oklch(0.42 0.20 142 / .10)", padding: "0.2rem 0.55rem", borderRadius: "9999px" }}>✅ {nPresent}j</span>
+                          {nAbsent > 0 && <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "oklch(0.50 0.22 27)", background: "oklch(0.50 0.22 27 / .10)", padding: "0.2rem 0.55rem", borderRadius: "9999px" }}>❌ {nAbsent}j</span>}
+                        </div>
+                        <div style={{ display: "flex", gap: "0.4rem" }}>
+                          <button
+                            onClick={() => setPresenceModal({ nani: n, month: currentMonth })}
+                            style={{
+                              display: "flex", alignItems: "center", gap: "0.35rem",
+                              padding: "0.4rem 0.85rem", borderRadius: "9999px", border: "none", cursor: "pointer",
+                              background: "linear-gradient(135deg, oklch(0.55 0.22 142), oklch(0.45 0.22 155))",
+                              color: "#fff", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.85rem",
+                              boxShadow: "0 2px 8px oklch(0.45 0.22 142 / .3)",
+                            }}
+                          >
+                            📅 Présences
+                          </button>
+                          <button
+                            onClick={() => printNaniMonth(n, currentMonth)}
+                            title="Imprimer le récapitulatif"
+                            style={{
+                              display: "flex", alignItems: "center", gap: "0.35rem",
+                              padding: "0.4rem 0.85rem", borderRadius: "9999px", border: "1.5px solid oklch(0.55 0.18 280 / .4)",
+                              background: "oklch(0.55 0.18 280 / .08)",
+                              color: "oklch(0.38 0.15 280)", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer",
+                            }}
+                          >
+                            🖨️ Imprimer
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (isPayFormOpen) {
+                                setPaymentFormNaniId(null);
+                                setEditPayId(null);
+                                setPayForm(emptyPayForm);
+                              } else {
+                                setPaymentFormNaniId(n.id);
+                                setEditPayId(null);
+                                setPayForm(emptyPayForm);
+                              }
+                            }}
+                            style={{
+                              display: "flex", alignItems: "center", gap: "0.35rem",
+                              padding: "0.4rem 0.85rem", borderRadius: "9999px", border: "none", cursor: "pointer",
+                              background: isPayFormOpen
+                                ? "oklch(0.577 0.245 27 / .12)"
+                                : "linear-gradient(135deg, oklch(0.60 0.22 310), oklch(0.52 0.22 260))",
+                              color: isPayFormOpen ? "oklch(0.50 0.22 27)" : "#fff",
+                              fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.85rem",
+                            }}
+                          >
+                            {isPayFormOpen ? "✕ Fermer" : "💳 Paiement"}
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-                      <div style={{ display: "flex", gap: "0.4rem" }}>
-                        <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "oklch(0.42 0.20 142)", background: "oklch(0.42 0.20 142 / .10)", padding: "0.2rem 0.55rem", borderRadius: "9999px" }}>✅ {nPresent}j</span>
-                        {nAbsent > 0 && <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "oklch(0.50 0.22 27)", background: "oklch(0.50 0.22 27 / .10)", padding: "0.2rem 0.55rem", borderRadius: "9999px" }}>❌ {nAbsent}j</span>}
+
+                    {/* ── Formulaire paiement ── */}
+                    {isPayFormOpen && (
+                      <div style={{
+                        background: "oklch(0.97 0.02 270 / .6)",
+                        border: "1.5px solid oklch(0.85 0.06 270 / .5)",
+                        borderRadius: "1rem",
+                        padding: "1.25rem",
+                      }}>
+                        <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.9rem", color: "oklch(0.35 0.10 270)", marginBottom: "1rem" }}>
+                          {editPayId ? "✏️ Modifier le paiement" : "💳 Nouveau paiement"}
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.65rem" }}>
+                          {/* Période type */}
+                          <Field label="Période">
+                            <select
+                              style={inputStyle}
+                              value={payForm.periodeType}
+                              onChange={(e) => setPayForm((f) => ({ ...f, periodeType: e.target.value as NaniPaymentPeriode }))}
+                            >
+                              <option value="jour">Jour</option>
+                              <option value="semaine">Semaine</option>
+                              <option value="mois">Mois</option>
+                            </select>
+                          </Field>
+                          {/* Référence de période */}
+                          <Field label={payForm.periodeType === "mois" ? "Mois (AAAA-MM)" : "Date (AAAA-MM-JJ)"}>
+                            <input
+                              style={inputStyle}
+                              type={payForm.periodeType === "mois" ? "month" : "date"}
+                              value={payForm.periodeRef}
+                              onChange={(e) => setPayForm((f) => ({ ...f, periodeRef: e.target.value }))}
+                            />
+                          </Field>
+                          {/* Statut */}
+                          <Field label="Statut du paiement">
+                            <select
+                              style={{
+                                ...inputStyle,
+                                background:
+                                  payForm.statut === "paye"
+                                    ? "oklch(0.90 0.10 142 / .4)"
+                                    : payForm.statut === "partiel"
+                                    ? "oklch(0.90 0.12 70 / .4)"
+                                    : "oklch(0.90 0.10 27 / .3)",
+                              }}
+                              value={payForm.statut}
+                              onChange={(e) => setPayForm((f) => ({ ...f, statut: e.target.value as NaniPaymentStatut }))}
+                            >
+                              <option value="non_paye">Non payé</option>
+                              <option value="partiel">Partiellement payé</option>
+                              <option value="paye">Payé</option>
+                            </select>
+                          </Field>
+                          {/* Montant dû */}
+                          <Field label="Montant à payer (FCFA)">
+                            <input
+                              style={inputStyle}
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              placeholder="0"
+                              value={payForm.montantDu}
+                              onChange={(e) => setPayForm((f) => ({ ...f, montantDu: e.target.value }))}
+                            />
+                          </Field>
+                          {/* Montant versé */}
+                          <Field label="Montant versé (FCFA)">
+                            <input
+                              style={inputStyle}
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              placeholder="0"
+                              value={payForm.montantVerse}
+                              onChange={(e) => setPayForm((f) => ({ ...f, montantVerse: e.target.value }))}
+                            />
+                          </Field>
+                          {/* Date paiement */}
+                          <Field label="Date du versement">
+                            <input
+                              style={inputStyle}
+                              type="date"
+                              value={payForm.datePaiement}
+                              onChange={(e) => setPayForm((f) => ({ ...f, datePaiement: e.target.value }))}
+                            />
+                          </Field>
+                          {/* Remarque */}
+                          <Field label="Remarque (facultatif)" span>
+                            <input
+                              style={inputStyle}
+                              type="text"
+                              placeholder="Ex : avance de 50 000 FCFA…"
+                              value={payForm.remarque}
+                              onChange={(e) => setPayForm((f) => ({ ...f, remarque: e.target.value }))}
+                            />
+                          </Field>
+                        </div>
+                        {/* Actions formulaire */}
+                        <div style={{ display: "flex", gap: "0.65rem", marginTop: "1rem" }}>
+                          <button
+                            onClick={() => {
+                              if (!payForm.periodeRef) return;
+                              const p: NaniPayment = {
+                                id: editPayId ?? uid(),
+                                naniId: n.id,
+                                periodeType: payForm.periodeType,
+                                periodeRef: payForm.periodeRef,
+                                montantDu: Number(payForm.montantDu) || 0,
+                                montantVerse: Number(payForm.montantVerse) || 0,
+                                statut: payForm.statut,
+                                remarque: payForm.remarque,
+                                datePaiement: payForm.datePaiement,
+                              };
+                              onSaveNaniPayment(p);
+                              setEditPayId(null);
+                              setPayForm(emptyPayForm);
+                            }}
+                            disabled={!payForm.periodeRef}
+                            style={{
+                              flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem",
+                              padding: "0.6rem 1.25rem", borderRadius: "9999px", border: "none", cursor: payForm.periodeRef ? "pointer" : "not-allowed",
+                              background: payForm.periodeRef
+                                ? "linear-gradient(135deg, oklch(0.60 0.22 142), oklch(0.48 0.22 155))"
+                                : "oklch(0.88 0.04 260)",
+                              color: payForm.periodeRef ? "#fff" : "oklch(0.60 0.06 260)",
+                              fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.9rem",
+                            }}
+                          >
+                            <Check size={16} /> Enregistrer
+                          </button>
+                          {editPayId && (
+                            <button
+                              onClick={() => { setEditPayId(null); setPayForm(emptyPayForm); }}
+                              style={{ padding: "0.6rem 1rem", borderRadius: "9999px", border: "none", background: "oklch(0.577 0.245 27 / .12)", color: "oklch(0.50 0.22 27)", fontFamily: "var(--font-display)", fontWeight: 700, cursor: "pointer" }}
+                            >
+                              <X size={16} />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <div style={{ display: "flex", gap: "0.4rem" }}>
-                        <button
-                          onClick={() => setPresenceModal({ nani: n, month: currentMonth })}
-                          style={{
-                            display: "flex", alignItems: "center", gap: "0.35rem",
-                            padding: "0.4rem 0.85rem", borderRadius: "9999px", border: "none", cursor: "pointer",
-                            background: "linear-gradient(135deg, oklch(0.55 0.22 142), oklch(0.45 0.22 155))",
-                            color: "#fff", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.85rem",
-                            boxShadow: "0 2px 8px oklch(0.45 0.22 142 / .3)",
-                          }}
-                        >
-                          $ Présences
-                        </button>
-                        <button
-                          onClick={() => printNaniMonth(n, currentMonth)}
-                          title="Imprimer le récapitulatif"
-                          style={{
-                            display: "flex", alignItems: "center", gap: "0.35rem",
-                            padding: "0.4rem 0.85rem", borderRadius: "9999px", border: "1.5px solid oklch(0.55 0.18 280 / .4)",
-                            background: "oklch(0.55 0.18 280 / .08)",
-                            color: "oklch(0.38 0.15 280)", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.85rem", cursor: "pointer",
-                          }}
-                        >
-                          🖨️ Imprimer
-                        </button>
+                    )}
+
+                    {/* ── Historique des paiements ── */}
+                    {naniPays.length > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
+                        <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "oklch(0.45 0.10 270)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.1rem" }}>
+                          Historique des paiements
+                        </div>
+                        {naniPays.map((p) => {
+                          const statutColor =
+                            p.statut === "paye"
+                              ? { bg: "oklch(0.42 0.20 142 / .10)", text: "oklch(0.30 0.18 142)", border: "oklch(0.60 0.18 142 / .3)" }
+                              : p.statut === "partiel"
+                              ? { bg: "oklch(0.75 0.14 70 / .15)", text: "oklch(0.45 0.16 70)", border: "oklch(0.65 0.16 70 / .4)" }
+                              : { bg: "oklch(0.577 0.245 27 / .08)", text: "oklch(0.50 0.22 27)", border: "oklch(0.577 0.245 27 / .3)" };
+                          const statutLabel = p.statut === "paye" ? "Payé" : p.statut === "partiel" ? "Partiel" : "Non payé";
+                          const periodeLabel =
+                            p.periodeType === "mois"
+                              ? new Date(p.periodeRef + "-01").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
+                              : p.periodeType === "semaine"
+                              ? `Semaine du ${new Date(p.periodeRef + "T12:00:00").toLocaleDateString("fr-FR")}`
+                              : new Date(p.periodeRef + "T12:00:00").toLocaleDateString("fr-FR");
+                          const reste = p.montantDu - p.montantVerse;
+
+                          return (
+                            <div
+                              key={p.id}
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns: "auto 1fr auto auto auto",
+                                gap: "0.6rem",
+                                alignItems: "center",
+                                padding: "0.65rem 0.9rem",
+                                borderRadius: "0.85rem",
+                                border: `1.5px solid ${statutColor.border}`,
+                                background: statutColor.bg,
+                              }}
+                            >
+                              {/* Badge statut */}
+                              <span style={{
+                                fontSize: "0.72rem", fontWeight: 700, padding: "0.15rem 0.6rem",
+                                borderRadius: "9999px", background: statutColor.text, color: "#fff",
+                                whiteSpace: "nowrap",
+                              }}>
+                                {statutLabel}
+                              </span>
+                              {/* Période + montants */}
+                              <div>
+                                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "oklch(0.30 0.08 270)", textTransform: "capitalize" }}>
+                                  {periodeLabel}
+                                </div>
+                                <div style={{ fontSize: "0.75rem", color: "oklch(0.50 0.07 265)", marginTop: "0.1rem" }}>
+                                  Dû : <strong>{p.montantDu.toLocaleString("fr-FR")} FCFA</strong>
+                                  {" · "}
+                                  Versé : <strong>{p.montantVerse.toLocaleString("fr-FR")} FCFA</strong>
+                                  {reste > 0 && <span style={{ color: "oklch(0.50 0.22 27)", fontWeight: 700 }}> · Reste : {reste.toLocaleString("fr-FR")} FCFA</span>}
+                                </div>
+                                {p.datePaiement && (
+                                  <div style={{ fontSize: "0.72rem", color: "oklch(0.60 0.06 265)", marginTop: "0.08rem" }}>
+                                    📅 {new Date(p.datePaiement + "T12:00:00").toLocaleDateString("fr-FR")}
+                                  </div>
+                                )}
+                                {p.remarque && (
+                                  <div style={{ fontSize: "0.72rem", color: "oklch(0.52 0.08 265)", fontStyle: "italic", marginTop: "0.08rem" }}>
+                                    💬 {p.remarque}
+                                  </div>
+                                )}
+                              </div>
+                              {/* Bouton modifier */}
+                              <button
+                                onClick={() => {
+                                  setPaymentFormNaniId(n.id);
+                                  setEditPayId(p.id);
+                                  setPayForm({
+                                    periodeType: p.periodeType,
+                                    periodeRef: p.periodeRef,
+                                    montantDu: p.montantDu,
+                                    montantVerse: p.montantVerse,
+                                    statut: p.statut,
+                                    remarque: p.remarque,
+                                    datePaiement: p.datePaiement,
+                                  });
+                                }}
+                                title="Modifier"
+                                style={{ display: "flex", alignItems: "center", padding: "0.3rem 0.5rem", borderRadius: "0.6rem", border: "1.5px solid oklch(0.55 0.18 260 / .4)", background: "oklch(0.55 0.18 260 / .08)", color: "oklch(0.40 0.15 260)", cursor: "pointer" }}
+                              >
+                                <Pencil size={13} />
+                              </button>
+                              {/* Bouton supprimer */}
+                              <button
+                                onClick={() => { if (confirm("Supprimer ce paiement ?")) onDeleteNaniPayment(p.id); }}
+                                title="Supprimer"
+                                style={{ display: "flex", alignItems: "center", padding: "0.3rem 0.5rem", borderRadius: "0.6rem", border: "1.5px solid oklch(0.577 0.245 27 / .3)", background: "oklch(0.577 0.245 27 / .07)", color: "oklch(0.50 0.22 27)", cursor: "pointer" }}
+                              >
+                                <X size={13} />
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
-                    </div>
+                    )}
                   </div>
                 );
               })}

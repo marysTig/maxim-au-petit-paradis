@@ -135,3 +135,63 @@ export function paymentToDb(p: Payment) {
     paid_at: nul(p.paidAt),
   };
 }
+
+/* ─────────────────────────────────────────────
+   NANI PAYMENTS
+   Paiements versés aux nounous, stockés dans `nani_payments`.
+───────────────────────────────────────────── */
+
+export type NaniPaymentStatut = "non_paye" | "partiel" | "paye";
+export type NaniPaymentPeriode = "jour" | "semaine" | "mois";
+
+export interface NaniPayment {
+  id: string;
+  naniId: string;
+
+  /** 'jour' | 'semaine' | 'mois' */
+  periodeType: NaniPaymentPeriode;
+  /** Référence de la période : YYYY-MM pour mois, YYYY-MM-DD pour jour/semaine */
+  periodeRef: string;
+
+  /** Montant théorique à payer */
+  montantDu: number;
+  /** Montant réellement versé */
+  montantVerse: number;
+
+  /** Statut : 'non_paye' | 'partiel' | 'paye' */
+  statut: NaniPaymentStatut;
+
+  /** Remarque facultative */
+  remarque: string;
+  /** Date du versement YYYY-MM-DD (vide si non versé) */
+  datePaiement: string;
+}
+
+export function dbToNaniPayment(r: Row): NaniPayment {
+  const statut = str(r["statut"]);
+  return {
+    id: str(r["id"]),
+    naniId: str(r["nani_id"]),
+    periodeType: (str(r["periode_type"]) as NaniPaymentPeriode) || "mois",
+    periodeRef: str(r["periode_ref"]),
+    montantDu: Number(r["montant_du"] ?? 0),
+    montantVerse: Number(r["montant_verse"] ?? 0),
+    statut: (statut === "partiel" || statut === "paye" ? statut : "non_paye") as NaniPaymentStatut,
+    remarque: str(r["remarque"]),
+    datePaiement: str(r["date_paiement"]),
+  };
+}
+
+export function naniPaymentToDb(p: NaniPayment) {
+  return {
+    id: p.id,
+    nani_id: p.naniId,
+    periode_type: p.periodeType,
+    periode_ref: p.periodeRef,
+    montant_du: p.montantDu,
+    montant_verse: p.montantVerse,
+    statut: p.statut,
+    remarque: nul(p.remarque),
+    date_paiement: nul(p.datePaiement),
+  };
+}
