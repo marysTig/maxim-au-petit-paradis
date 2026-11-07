@@ -70,23 +70,14 @@ export function PaymentGridSection({ children, payments, onRecord, crecheSection
 
   const popRef = useRef<HTMLDivElement>(null);
 
-  /* Sections : priorité aux sections définies dans "Section & Groupe", complétées par celles présentes chez les enfants */
+  /* Sections issues de "Section & Groupe" (si configurées), ou des sections des enfants */
   const sections = useMemo(() => {
-    const list: string[] = [];
-    // 1. Sections configurées dans "Section & Groupe"
-    crecheSections.forEach((s) => {
-      const name = s.name.trim();
-      if (name && !list.includes(name)) list.push(name);
-    });
-    // 2. Sections trouvées sur des enfants actifs si non encore présentes
-    children
-      .filter((c) => c.active !== false)
-      .map((c) => c.section?.trim() ?? "")
-      .filter(Boolean)
-      .forEach((name) => {
-        if (!list.includes(name)) list.push(name);
-      });
-    return list;
+    if (crecheSections && crecheSections.length > 0) {
+      const names = crecheSections.map((s) => s.name.trim()).filter(Boolean);
+      return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b, "fr"));
+    }
+    const s = new Set(children.filter((c) => c.active !== false).map((c) => c.section?.trim() ?? "").filter(Boolean));
+    return Array.from(s).sort((a, b) => a.localeCompare(b, "fr"));
   }, [crecheSections, children]);
 
   /* Liste filtrée : les enfants inactifs sont exclus */
