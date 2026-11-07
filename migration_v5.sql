@@ -56,3 +56,11 @@ create policy "allow_all_nani_payments"
   using (true)
   with check (true);
 
+
+-- ============================================================
+-- 4. COLONNE ACTIVE SUR CHILDREN (STATUT ACTIF / INACTIF)
+-- ============================================================
+alter table children
+  add column if not exists active boolean not null default true;
+
+

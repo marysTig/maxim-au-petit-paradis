@@ -990,7 +990,7 @@ function AdminDashboard() {
         )}
         {!loading && !dbError && section === "paiement" && (
           <PaymentGridSection
-            children={children}
+            children={children.filter((c) => c.active !== false)}
             payments={payments}
             onRecord={recordPayment}
           />
@@ -998,6 +998,7 @@ function AdminDashboard() {
         {!loading && !dbError && section === "pre-inscription" && (
           <PreInscriptionSection
             preInscrits={preInscrits}
+            children={children}
             onSave={savePreInscrit}
             onDelete={deletePreInscrit}
           />
@@ -1193,6 +1194,10 @@ function ChildrenSection({
   const [search, setSearch] = useState("");
   const [filterSection, setFilterSection] = useState("");
   const [filterGroup, setFilterGroup] = useState("");
+  const [filterActive, setFilterActive] = useState<"all" | "active" | "inactive">("active");
+
+  const activeCount = useMemo(() => children.filter((c) => c.active !== false).length, [children]);
+  const inactiveCount = useMemo(() => children.filter((c) => c.active === false).length, [children]);
 
   function setF<K extends keyof Omit<Child, "id">>(k: K, v: Omit<Child, "id">[K]) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -1286,7 +1291,13 @@ function ChildrenSection({
     const matchText = `${c.firstName} ${c.lastName}`.toLowerCase().includes(search.toLowerCase());
     const matchSection = !filterSection || c.section === filterSection;
     const matchGroup = !filterGroup || c.group === filterGroup;
-    return matchText && matchSection && matchGroup;
+    const matchActive =
+      filterActive === "all"
+        ? true
+        : filterActive === "active"
+        ? c.active !== false
+        : c.active === false;
+    return matchText && matchSection && matchGroup && matchActive;
   });
 
   // Groupes disponibles pour le filtre (selon la section sélectionnée)
@@ -1593,6 +1604,28 @@ function ChildrenSection({
       )}
 
 
+      {/* Filtres Actifs / Inactifs */}
+      <div style={{ display: "flex", gap: "0.45rem", marginBottom: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
+        <button
+          onClick={() => setFilterActive("active")}
+          style={pillBtn(filterActive === "active")}
+        >
+          ✓ Actifs ({activeCount})
+        </button>
+        <button
+          onClick={() => setFilterActive("inactive")}
+          style={pillBtn(filterActive === "inactive")}
+        >
+          ✕ Inactifs ({inactiveCount})
+        </button>
+        <button
+          onClick={() => setFilterActive("all")}
+          style={pillBtn(filterActive === "all")}
+        >
+          Tous ({children.length})
+        </button>
+      </div>
+
       {/* Search + Filtres */}
       <div style={{ display: "flex", gap: "0.65rem", marginBottom: "1rem", flexWrap: "wrap" }}>
         <input
@@ -1691,9 +1724,32 @@ function ChildrenSection({
                   }}
                 >
                   {/* Nom + Date naissance */}
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.95rem", color: "oklch(0.25 0.08 270)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {child.lastName} {child.firstName}
+                  <div style={{ minWidth: 0, opacity: child.active === false ? 0.65 : 1 }}>
+                    <div style={{
+                      fontFamily: "var(--font-display)",
+                      fontWeight: 700,
+                      fontSize: "0.95rem",
+                      color: child.active === false ? "oklch(0.50 0.05 260)" : "oklch(0.25 0.08 270)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.45rem",
+                    }}>
+                      <span>{child.lastName} {child.firstName}</span>
+                      {child.active === false && (
+                        <span style={{
+                          fontSize: "0.68rem",
+                          fontWeight: 700,
+                          padding: "0.1rem 0.45rem",
+                          borderRadius: "9999px",
+                          background: "oklch(0.577 0.245 27 / .15)",
+                          color: "oklch(0.48 0.22 27)",
+                        }}>
+                          Inactif
+                        </span>
+                      )}
                     </div>
                     {child.birthDate && (
                       <div style={{ fontSize: "0.73rem", color: "oklch(0.55 0.06 260)", marginTop: "0.1rem", whiteSpace: "nowrap" }}>

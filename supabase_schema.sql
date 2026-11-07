@@ -42,6 +42,7 @@ create table if not exists children (
   parent_ids  text[] not null default '{}',
   allergies   text,
   notes       text,
+  active      boolean not null default true,
 
   created_at  timestamptz default now()
 );

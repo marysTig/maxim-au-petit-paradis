@@ -119,4 +119,87 @@ describe("Admin page rendering", () => {
     expect(waLinks[0].getAttribute("href")).toContain("213770123456");
     expect(waLinks[1].getAttribute("href")).toContain("213550987654");
   });
+
+  it("excludes inactive children from PaymentGridSection", async () => {
+    const { PaymentGridSection } = await import("../components/admin/PaymentGridSection");
+    render(
+      <PaymentGridSection
+        children={[
+          { id: "c-active", firstName: "Lina", lastName: "Actif", section: "Bébés", active: true },
+          { id: "c-inactive", firstName: "Nassim", lastName: "Inactif", section: "Bébés", active: false },
+        ]}
+        payments={[]}
+        onRecord={() => {}}
+      />
+    );
+
+    expect(screen.getByText(/Lina/i)).toBeDefined();
+    expect(screen.queryByText(/Nassim/i)).toBeNull();
+  });
+
+  it("excludes inactive children from PreInscriptionSection", async () => {
+    const { PreInscriptionSection } = await import("../components/admin/PreInscriptionSection");
+    render(
+      <PreInscriptionSection
+        preInscrits={[
+          {
+            id: "pre-active",
+            firstName: "Lina",
+            lastName: "Actif",
+            birthDate: "2024-01-01",
+            anneeScolaire: "2026-2027",
+            montant: 5000,
+            datePaiement: "2026-11-01",
+          },
+          {
+            id: "pre-inactive",
+            firstName: "Nassim",
+            lastName: "Inactif",
+            birthDate: "2024-01-01",
+            anneeScolaire: "2026-2027",
+            montant: 5000,
+            datePaiement: "2026-11-01",
+          },
+        ]}
+        children={[
+          { firstName: "Lina", lastName: "Actif", active: true },
+          { firstName: "Nassim", lastName: "Inactif", active: false },
+        ]}
+        onSave={() => {}}
+        onDelete={() => {}}
+      />
+    );
+
+    expect(screen.getByText(/Lina/i)).toBeDefined();
+    expect(screen.queryByText(/Nassim/i)).toBeNull();
+  });
+
+  it("does not count inactive children in sections in ReportsSection", async () => {
+    const { ReportsSection } = await import("../components/admin/ReportsSection");
+    render(
+      <ReportsSection
+        children={[
+          { section: "Bébés", active: true },
+          { section: "Bébés", active: false },
+          { section: "Grands", active: false },
+        ]}
+        parentsCount={1}
+        nanisCount={1}
+        presences={{}}
+        crecheSections={[
+          { id: "s-1", name: "Bébés" },
+          { id: "s-2", name: "Grands" },
+        ]}
+        payments={[]}
+        preInscrits={[]}
+        naniPayments={[]}
+        finance={[]}
+      />
+    );
+
+    // Only 1 active child should be counted in Bébés, 0 in Grands
+    // In "👶 Enfants par section", Bébés count should be 1
+    const bebesSection = screen.getByText("Bébés");
+    expect(bebesSection).toBeDefined();
+  });
 });

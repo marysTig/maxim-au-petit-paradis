@@ -37,6 +37,7 @@ interface Child {
   firstName: string;
   lastName: string;
   section?: string;
+  active?: boolean;
 }
 
 interface Props {
@@ -68,18 +69,20 @@ export function PaymentGridSection({ children, payments, onRecord }: Props) {
 
   const popRef = useRef<HTMLDivElement>(null);
 
-  /* Sections uniques */
+  /* Sections uniques (enfants actifs uniquement) */
   const sections = useMemo(() => {
-    const s = new Set(children.map((c) => c.section ?? "").filter(Boolean));
+    const s = new Set(children.filter((c) => c.active !== false).map((c) => c.section ?? "").filter(Boolean));
     return Array.from(s).sort((a, b) => a.localeCompare(b, "fr"));
   }, [children]);
 
-  /* Liste filtrée */
+  /* Liste filtrée : les enfants inactifs sont exclus */
   const filtered = useMemo(() => {
     const monthKeys = SCHOOL_MONTHS.map(({ m }) => monthKey(schoolYear, m));
 
     return [...children]
       .filter((c) => {
+        // Enfant actif uniquement
+        if (c.active === false) return false;
         // Recherche nom
         const fullName = `${c.firstName} ${c.lastName}`.toLowerCase();
         if (search && !fullName.includes(search.toLowerCase())) return false;
@@ -177,6 +180,7 @@ export function PaymentGridSection({ children, payments, onRecord }: Props) {
   };
 
   const hasFilters = search || filterSection || filterStatus !== "all";
+  const activeTotal = useMemo(() => children.filter((c) => c.active !== false).length, [children]);
 
   return (
     <div>
@@ -184,7 +188,7 @@ export function PaymentGridSection({ children, payments, onRecord }: Props) {
         icon="💳"
         title="Paiements"
         count={filtered.length}
-        subtitle={`Suivi mensuel — ${filtered.length} enfant${filtered.length > 1 ? "s" : ""} affiché${filtered.length > 1 ? "s" : ""} sur ${children.length}`}
+        subtitle={`Suivi mensuel — ${filtered.length} enfant${filtered.length > 1 ? "s" : ""} actif${filtered.length > 1 ? "s" : ""} sur ${activeTotal}`}
         action={undefined}
       />
 

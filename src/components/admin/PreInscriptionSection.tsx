@@ -26,6 +26,7 @@ export interface PreInscrit {
   anneeScolaire: string; // e.g. "2026-2027"
   montant: number;       // montant payé à la pré-inscription
   datePaiement: string;  // YYYY-MM-DD
+  active?: boolean;
 }
 
 /* ─────────────────────────────────────────────
@@ -64,10 +65,12 @@ function schoolYearOptions(): string[] {
 ───────────────────────────────────────────── */
 export function PreInscriptionSection({
   preInscrits,
+  children = [],
   onSave,
   onDelete,
 }: {
   preInscrits: PreInscrit[];
+  children?: { lastName: string; firstName: string; active?: boolean }[];
   onSave: (p: PreInscrit) => void;
   onDelete: (id: string) => void;
 }) {
@@ -76,6 +79,17 @@ export function PreInscriptionSection({
   /* ── Filters ── */
   const [filterYear, setFilterYear] = useState("");
   const [search, setSearch] = useState("");
+
+  /* ── Ensemble des enfants inactifs dans la crèche pour exclusion ── */
+  const inactiveNames = useMemo(() => {
+    const set = new Set<string>();
+    (children ?? []).forEach((c) => {
+      if (c.active === false) {
+        set.add(`${c.lastName.trim().toLowerCase()}::${c.firstName.trim().toLowerCase()}`);
+      }
+    });
+    return set;
+  }, [children]);
 
   /* ── Add form ── */
   const [showForm, setShowForm] = useState(false);
@@ -98,6 +112,13 @@ export function PreInscriptionSection({
     const q = search.toLowerCase();
     return preInscrits
       .filter((p) => {
+        // Exclure si le pré-inscrit est explicitement inactif
+        if (p.active === false) return false;
+
+        // Exclure si l'enfant correspondant dans la crèche est marqué inactif
+        const key = `${p.lastName.trim().toLowerCase()}::${p.firstName.trim().toLowerCase()}`;
+        if (inactiveNames.has(key)) return false;
+
         const matchYear = !filterYear || p.anneeScolaire === filterYear;
         const matchSearch =
           !q ||
@@ -106,7 +127,7 @@ export function PreInscriptionSection({
         return matchYear && matchSearch;
       })
       .sort((a, b) => a.lastName.localeCompare(b.lastName, "fr") || a.firstName.localeCompare(b.firstName, "fr"));
-  }, [preInscrits, filterYear, search]);
+  }, [preInscrits, filterYear, search, inactiveNames]);
 
   /* ── Add ── */
   const montantNum = Number(String(form.montant).replace(",", "."));

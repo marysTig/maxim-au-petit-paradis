@@ -81,6 +81,7 @@ export function EspaceParentSection({
   // Filtre et recherche pour la liste des parents
   const [search, setSearch] = useState("");
   const [selectedSection, setSelectedSection] = useState("all");
+  const [filterActive, setFilterActive] = useState<"all" | "active" | "inactive">("active");
   const [copiedAll, setCopiedAll] = useState(false);
 
   // Annonces
@@ -127,6 +128,7 @@ export function EspaceParentSection({
         childId: c.id,
         childLastName: c.lastName?.trim() || "",
         childFirstName: c.firstName?.trim() || "",
+        active: c.active !== false,
         section: c.section || "Non défini",
         group: c.group || "",
         fatherName,
@@ -144,10 +146,12 @@ export function EspaceParentSection({
     });
   }, [children, parents]);
 
-  // Filtrage recherche & section
+  // Filtrage recherche, statut actif & section
   const filteredContacts = useMemo(() => {
     const q = search.trim().toLowerCase();
     return resolvedContacts.filter((item) => {
+      if (filterActive === "active" && !item.active) return false;
+      if (filterActive === "inactive" && item.active) return false;
       if (selectedSection !== "all" && item.section !== selectedSection) {
         return false;
       }
@@ -158,7 +162,7 @@ export function EspaceParentSection({
       const matchSection = item.section.toLowerCase().includes(q);
       return matchChild || matchFather || matchMother || matchSection;
     });
-  }, [resolvedContacts, search, selectedSection]);
+  }, [resolvedContacts, search, selectedSection, filterActive]);
 
   // Statistiques contacts
   const stats = useMemo(() => {
@@ -339,6 +343,25 @@ export function EspaceParentSection({
                   ))}
                 </select>
               )}
+
+              <div style={{ display: "flex", gap: "0.3rem", alignItems: "center" }}>
+                <button
+                  type="button"
+                  onClick={() => setFilterActive("active")}
+                  style={pillBtn(filterActive === "active")}
+                  title="Afficher uniquement les enfants actifs"
+                >
+                  Actifs
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterActive("all")}
+                  style={pillBtn(filterActive === "all")}
+                  title="Afficher tous les enfants (y compris inactifs)"
+                >
+                  Tous
+                </button>
+              </div>
             </div>
 
             <button

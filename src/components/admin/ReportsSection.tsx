@@ -24,7 +24,7 @@ export function ReportsSection({
   naniPayments = [],
   finance = [],
 }: {
-  children: { section: string }[];
+  children: { section: string; active?: boolean }[];
   parentsCount: number;
   nanisCount: number;
   presences: Record<string, Record<string, DayStatus>>;
@@ -36,9 +36,14 @@ export function ReportsSection({
 }) {
   const [month, setMonth] = useState(localDateStr().slice(0, 7));
 
+  // Enfants actifs uniquement (les inactifs ne sont pas comptabilisés dans les sections)
+  const activeChildren = useMemo(() => {
+    return children.filter((c) => c.active !== false);
+  }, [children]);
+
   const report = useMemo(
-    () => buildReport({ children, presences, finance: [], month }),
-    [children, presences, month]
+    () => buildReport({ children: activeChildren, presences, finance: [], month }),
+    [activeChildren, presences, month]
   );
 
   const monthLabel = useMemo(() => {
@@ -122,7 +127,7 @@ export function ReportsSection({
       for (const s of crecheSections) counts[s.name] = 0;
 
       let autreCount = 0;
-      for (const c of children) {
+      for (const c of activeChildren) {
         if (officialNames.has(c.section)) {
           counts[c.section] = (counts[c.section] ?? 0) + 1;
         } else {
@@ -134,9 +139,9 @@ export function ReportsSection({
       if (autreCount > 0) rows.push(["Autre", autreCount]);
       return rows;
     }
-    // Fallback : valeurs distinctes issues des enfants
+    // Fallback : valeurs distinctes issues des enfants actifs
     return Object.entries(report.sectionCounts).sort(([a], [b]) => a.localeCompare(b, "fr"));
-  }, [children, crecheSections, report.sectionCounts]);
+  }, [activeChildren, crecheSections, report.sectionCounts]);
 
   const statCard = (icon: string, value: string | number, label: string, color: string) => (
     <div style={{ ...card, textAlign: "center", padding: "1.1rem" }}>
