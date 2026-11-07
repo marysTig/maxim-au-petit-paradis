@@ -2013,6 +2013,16 @@ function ChildrenSection({
                           : null)}
                   </select>
                 </Field>
+                <Field label="Statut">
+                  <select
+                    style={inputStyle}
+                    value={editChild.active !== false ? "actif" : "inactif"}
+                    onChange={(e) => setEC("active", e.target.value === "actif")}
+                  >
+                    <option value="actif">🟢 Actif (inscrit / présent)</option>
+                    <option value="inactif">⚪ Inactif (archivé / suspendu)</option>
+                  </select>
+                </Field>
                 <Field label="Allergies" span>
                   <input style={inputStyle} value={editChild.allergies} onChange={(e) => setEC("allergies", e.target.value)} />
                 </Field>
