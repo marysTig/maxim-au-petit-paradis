@@ -972,6 +972,10 @@ function AdminDashboard() {
             nanisCount={nanis.length}
             presences={naniPresences}
             crecheSections={crecheSections}
+            payments={payments}
+            preInscrits={preInscrits}
+            naniPayments={naniPayments}
+            finance={finance}
           />
         )}
         {!loading && !dbError && section === "espace-parent" && (
