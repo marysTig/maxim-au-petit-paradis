@@ -986,6 +986,7 @@ function AdminDashboard() {
             onAnnouncementDelete={deleteAnnouncementDb}
             children={children}
             parents={parents}
+            crecheSections={crecheSections}
           />
         )}
         {!loading && !dbError && section === "paiement" && (
@@ -993,6 +994,7 @@ function AdminDashboard() {
             children={children.filter((c) => c.active !== false)}
             payments={payments}
             onRecord={recordPayment}
+            crecheSections={crecheSections}
           />
         )}
         {!loading && !dbError && section === "pre-inscription" && (

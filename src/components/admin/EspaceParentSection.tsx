@@ -67,6 +67,7 @@ export function EspaceParentSection({
   onAnnouncementDelete,
   children = [],
   parents = [],
+  crecheSections = [],
 }: {
   announcements: Announcement[];
   setAnnouncements: Dispatch<SetStateAction<Announcement[]>>;
@@ -74,6 +75,7 @@ export function EspaceParentSection({
   onAnnouncementDelete: (id: string) => void;
   children?: ChildContact[];
   parents?: ParentContact[];
+  crecheSections?: { id: string; name: string }[];
 }) {
   // Onglets : "parents" (Contacts WhatsApp) ou "annonces" (Annonces publiques)
   const [activeTab, setActiveTab] = useState<"parents" | "annonces">("parents");
@@ -94,14 +96,19 @@ export function EspaceParentSection({
     return [...announcements].sort((a, b) => b.date.localeCompare(a.date));
   }, [announcements]);
 
-  // Sections distinctes issues des enfants
+  // Sections : priorité aux sections définies dans "Section & Groupe", complétées par celles présentes chez les enfants
   const availableSections = useMemo(() => {
-    const set = new Set<string>();
-    children.forEach((c) => {
-      if (c.section) set.add(c.section);
+    const list: string[] = [];
+    (crecheSections || []).forEach((s) => {
+      const name = s.name.trim();
+      if (name && !list.includes(name)) list.push(name);
     });
-    return Array.from(set).sort((a, b) => a.localeCompare(b, "fr"));
-  }, [children]);
+    children.forEach((c) => {
+      const name = c.section?.trim() || "";
+      if (name && !list.includes(name)) list.push(name);
+    });
+    return list;
+  }, [crecheSections, children]);
 
   // Normalisation des contacts parents pour chaque enfant
   const resolvedContacts = useMemo(() => {

@@ -44,6 +44,7 @@ interface Props {
   children: Child[];
   payments: Payment[];
   onRecord: (p: Payment) => void;
+  crecheSections?: { id: string; name: string }[];
 }
 
 type StatusFilter = "all" | "paid" | "pending" | "late";
@@ -55,7 +56,7 @@ const STATUS_FILTERS: { id: StatusFilter; label: string; color: string; text: st
   { id: "late",    label: "En retard",  color: "oklch(0.92 0.14 27)",  text: "oklch(0.40 0.18 27)"  },
 ];
 
-export function PaymentGridSection({ children, payments, onRecord }: Props) {
+export function PaymentGridSection({ children, payments, onRecord, crecheSections = [] }: Props) {
   const [schoolYear,   setSchoolYear]   = useState(currentSchoolYear);
   const [activeCell,   setActiveCell]   = useState<{ childId: string; mk: string } | null>(null);
   const [dateInput,    setDateInput]    = useState("");
@@ -69,11 +70,24 @@ export function PaymentGridSection({ children, payments, onRecord }: Props) {
 
   const popRef = useRef<HTMLDivElement>(null);
 
-  /* Sections uniques (enfants actifs uniquement) */
+  /* Sections : priorité aux sections définies dans "Section & Groupe", complétées par celles présentes chez les enfants */
   const sections = useMemo(() => {
-    const s = new Set(children.filter((c) => c.active !== false).map((c) => c.section ?? "").filter(Boolean));
-    return Array.from(s).sort((a, b) => a.localeCompare(b, "fr"));
-  }, [children]);
+    const list: string[] = [];
+    // 1. Sections configurées dans "Section & Groupe"
+    crecheSections.forEach((s) => {
+      const name = s.name.trim();
+      if (name && !list.includes(name)) list.push(name);
+    });
+    // 2. Sections trouvées sur des enfants actifs si non encore présentes
+    children
+      .filter((c) => c.active !== false)
+      .map((c) => c.section?.trim() ?? "")
+      .filter(Boolean)
+      .forEach((name) => {
+        if (!list.includes(name)) list.push(name);
+      });
+    return list;
+  }, [crecheSections, children]);
 
   /* Liste filtrée : les enfants inactifs sont exclus */
   const filtered = useMemo(() => {
