@@ -71,4 +71,52 @@ describe("Admin page rendering", () => {
     // Verify "Enfants par section" is rendered below
     expect(screen.getByText(/Enfants par section/i)).toBeDefined();
   });
+
+  it("renders EspaceParentSection with children parent contacts & WhatsApp links", async () => {
+    const { EspaceParentSection } = await import("../components/admin/EspaceParentSection");
+    render(
+      <EspaceParentSection
+        announcements={[]}
+        setAnnouncements={() => {}}
+        onAnnouncementUpsert={() => {}}
+        onAnnouncementDelete={() => {}}
+        children={[
+          {
+            id: "child-1",
+            firstName: "Yacine",
+            lastName: "Benali",
+            section: "Bébés",
+            fatherName: "Ahmed Benali",
+            fatherPhone: "0770123456",
+            motherName: "Fatima Benali",
+            motherPhone: "0550987654",
+          },
+        ]}
+        parents={[]}
+      />
+    );
+
+    // Verify tabs
+    expect(screen.getByText(/Contacts & WhatsApp des parents/i)).toBeDefined();
+    expect(screen.getAllByText(/Annonces publiques/i).length).toBeGreaterThanOrEqual(1);
+
+    // Verify Child info
+    expect(screen.getAllByText(/Benali/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Yacine/i)).toBeDefined();
+
+    // Verify Father info & WhatsApp
+    expect(screen.getByText(/Ahmed Benali/i)).toBeDefined();
+    expect(screen.getByText(/0770123456/i)).toBeDefined();
+
+    // Verify Mother info & WhatsApp
+    expect(screen.getByText(/Fatima Benali/i)).toBeDefined();
+    expect(screen.getByText(/0550987654/i)).toBeDefined();
+
+    // Verify WhatsApp links
+    const links = screen.getAllByRole("link");
+    const waLinks = links.filter((l) => l.getAttribute("href")?.includes("wa.me"));
+    expect(waLinks.length).toBe(2);
+    expect(waLinks[0].getAttribute("href")).toContain("213770123456");
+    expect(waLinks[1].getAttribute("href")).toContain("213550987654");
+  });
 });

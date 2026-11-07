@@ -984,6 +984,8 @@ function AdminDashboard() {
             setAnnouncements={setAnnouncements}
             onAnnouncementUpsert={upsertAnnouncement}
             onAnnouncementDelete={deleteAnnouncementDb}
+            children={children}
+            parents={parents}
           />
         )}
         {!loading && !dbError && section === "paiement" && (
