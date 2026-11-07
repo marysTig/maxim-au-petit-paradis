@@ -27,7 +27,7 @@ import {
   Settings,
   Download,
 } from "lucide-react";
-import { EmptyState, ErrorBanner } from "../components/admin/ui";
+import { EmptyState, ErrorBanner, pillBtn } from "../components/admin/ui";
 import { PaymentModal, isPaidFor, thisMonth } from "../components/admin/PaymentModal";
 import { MenusSection } from "../components/admin/MenusSection";
 import { ActivitiesSection } from "../components/admin/ActivitiesSection";
