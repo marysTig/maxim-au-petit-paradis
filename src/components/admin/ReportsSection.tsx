@@ -51,8 +51,9 @@ export function ReportsSection({
   /* ── 1. Calcul des Gains (Paiements enfants + Pré-inscriptions du mois) ── */
   const gainsData = useMemo(() => {
     // Paiements des enfants pour ce mois (status "paid")
+    // Note : parenthèses explicites pour éviter le bug de priorité || vs &&
     const childPays = (payments ?? []).filter(
-      (p) => (p.month === month || (p.paidAt && p.paidAt.startsWith(month))) && p.status === "paid"
+      (p) => p.status === "paid" && (p.month === month || (p.paidAt && p.paidAt.startsWith(month)))
     );
     const childPaysTotal = childPays.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
