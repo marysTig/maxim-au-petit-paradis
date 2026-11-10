@@ -202,4 +202,47 @@ describe("Admin page rendering", () => {
     const bebesSection = screen.getByText("Bébés");
     expect(bebesSection).toBeDefined();
   });
+
+  it("allows selecting paid months in PaymentGridSection and displays print receipt button", async () => {
+    const { PaymentGridSection } = await import("../components/admin/PaymentGridSection");
+    const { fireEvent } = await import("@testing-library/react");
+    
+    // Année scolaire courante
+    const now = new Date();
+    const sy = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+    const sepKey = `${sy}-09`;
+    const octKey = `${sy}-10`;
+
+    render(
+      <PaymentGridSection
+        children={[
+          { id: "c1", firstName: "Yasmine", lastName: "BOUZID", section: "Moyens", active: true },
+        ]}
+        payments={[
+          { id: "p1", childId: "c1", month: sepKey, amount: 8000, status: "paid", paidAt: `${sy}-09-05` },
+          { id: "p2", childId: "c1", month: octKey, amount: 8000, status: "paid", paidAt: `${sy}-10-06` },
+        ]}
+        onRecord={() => {}}
+      />
+    );
+
+    // Initialement aucun bouton d'impression
+    expect(screen.queryByText(/Imprimer le bon/i)).toBeNull();
+
+    // Trouver les boutons de case à cocher
+    const checkBtns = screen.getAllByTitle(/Sélectionner ce mois pour le bon de paiement/i);
+    expect(checkBtns.length).toBeGreaterThanOrEqual(2);
+
+    // Sélectionner le 1er mois payé
+    fireEvent.click(checkBtns[0]);
+
+    // Le bandeau d'impression doit maintenant apparaître
+    expect(screen.getByText(/Imprimer le bon/i)).toBeDefined();
+    expect(screen.getAllByText(/BOUZID Yasmine/i).length).toBeGreaterThanOrEqual(1);
+
+    // Sélectionner le 2ème mois payé
+    fireEvent.click(checkBtns[1]);
+    expect(screen.getByText(/2 mois sélectionnés/i)).toBeDefined();
+    expect(screen.getByText(/Total : 16\s?000 DA/i)).toBeDefined();
+  });
 });
