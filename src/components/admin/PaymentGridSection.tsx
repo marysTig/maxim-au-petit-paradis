@@ -188,49 +188,49 @@ export function PaymentGridSection({ children, payments, onRecord, crecheSection
 <style>
   @page {
     size: A4 portrait;
-    margin: 12mm 15mm;
+    margin: 8mm 10mm;
   }
-  * { box-sizing: border-box; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    color: #1e1b4b;
-    background: #fff;
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
     margin: 0;
-    padding: 20px;
-    font-size: 13px;
-    line-height: 1.45;
+    padding: 0;
+    background: #fff;
+    color: #1e1b4b;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 11.5px;
+    line-height: 1.35;
   }
   .receipt-container {
-    max-width: 780px;
+    max-width: 740px;
     margin: 0 auto;
-    border: 2px solid #4338ca;
-    border-radius: 14px;
-    padding: 28px 32px;
+    border: 1.5px solid #4338ca;
+    border-radius: 10px;
+    padding: 16px 20px;
     background: #ffffff;
-    box-shadow: 0 4px 20px rgba(67, 56, 202, 0.08);
+    box-shadow: 0 2px 12px rgba(67, 56, 202, 0.08);
   }
   .header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    border-bottom: 2px solid #e0e7ff;
-    padding-bottom: 18px;
-    margin-bottom: 22px;
+    align-items: center;
+    border-bottom: 1.5px solid #e0e7ff;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
   }
   .brand h1 {
     margin: 0;
-    font-size: 24px;
+    font-size: 18px;
     font-weight: 800;
     color: #3730a3;
     letter-spacing: -0.02em;
   }
   .brand p {
-    margin: 3px 0 0;
-    font-size: 12px;
+    margin: 2px 0 0;
+    font-size: 10.5px;
     color: #6366f1;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
   }
   .receipt-meta {
     text-align: right;
@@ -239,68 +239,68 @@ export function PaymentGridSection({ children, payments, onRecord, crecheSection
     display: inline-block;
     background: #e0e7ff;
     color: #3730a3;
-    padding: 5px 12px;
+    padding: 3px 10px;
     border-radius: 9999px;
     font-weight: 700;
-    font-size: 12px;
-    margin-bottom: 6px;
+    font-size: 11px;
+    margin-bottom: 3px;
   }
   .receipt-meta p {
-    margin: 2px 0;
-    font-size: 11px;
+    margin: 1px 0;
+    font-size: 10px;
     color: #64748b;
   }
   .info-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 24px;
+    gap: 12px;
+    margin-bottom: 12px;
   }
   .info-box {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 14px 16px;
+    border-radius: 8px;
+    padding: 8px 12px;
   }
   .info-title {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
     color: #475569;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
     border-bottom: 1px dashed #cbd5e1;
-    padding-bottom: 4px;
+    padding-bottom: 2px;
   }
   .info-row {
     display: flex;
     justify-content: space-between;
-    margin: 4px 0;
-    font-size: 12.5px;
+    margin: 2px 0;
+    font-size: 11px;
   }
   .info-label { color: #64748b; }
   .info-val { font-weight: 700; color: #0f172a; }
   table.items-table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
   }
   table.items-table th {
     background: #4338ca;
     color: #ffffff;
     text-align: left;
-    padding: 10px 14px;
-    font-size: 11px;
+    padding: 6px 10px;
+    font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
   }
-  table.items-table th:first-child { border-top-left-radius: 8px; }
-  table.items-table th:last-child { border-top-right-radius: 8px; text-align: right; }
+  table.items-table th:first-child { border-top-left-radius: 6px; }
+  table.items-table th:last-child { border-top-right-radius: 6px; text-align: right; }
   table.items-table td {
-    padding: 10px 14px;
+    padding: 6px 10px;
     border-bottom: 1px solid #e2e8f0;
-    font-size: 12.5px;
+    font-size: 11px;
   }
   table.items-table td:last-child {
     text-align: right;
@@ -313,80 +313,86 @@ export function PaymentGridSection({ children, payments, onRecord, crecheSection
     display: inline-block;
     background: #dcfce7;
     color: #15803d;
-    padding: 3px 8px;
-    border-radius: 6px;
-    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
     font-weight: 700;
   }
   .total-card {
     display: flex;
     justify-content: flex-end;
-    margin-bottom: 30px;
+    margin-bottom: 14px;
   }
   .total-box {
     background: #eef2ff;
-    border: 2px solid #c7d2fe;
-    border-radius: 10px;
-    padding: 12px 24px;
-    min-width: 260px;
+    border: 1.5px solid #c7d2fe;
+    border-radius: 8px;
+    padding: 8px 18px;
+    min-width: 240px;
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
   .total-label {
-    font-size: 14px;
+    font-size: 11.5px;
     font-weight: 700;
     color: #3730a3;
   }
   .total-val {
-    font-size: 20px;
+    font-size: 16px;
     font-weight: 800;
     color: #312e81;
   }
   .signatures-section {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 40px;
-    margin-top: 25px;
-    padding-top: 15px;
+    gap: 20px;
+    margin-top: 10px;
   }
   .signature-block {
-    border: 1.5px dashed #cbd5e1;
-    border-radius: 10px;
-    padding: 14px;
-    height: 125px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 8px 10px;
+    height: 70px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     background: #fafafa;
   }
   .sig-title {
-    font-size: 11.5px;
+    font-size: 10px;
     font-weight: 700;
     color: #475569;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
   }
   .sig-sub {
-    font-size: 10px;
+    font-size: 9px;
     color: #94a3b8;
     font-style: italic;
   }
   .footer-note {
-    margin-top: 25px;
+    margin-top: 12px;
     text-align: center;
-    font-size: 10.5px;
+    font-size: 9px;
     color: #64748b;
     border-top: 1px solid #e2e8f0;
-    padding-top: 12px;
+    padding-top: 6px;
   }
   @media print {
-    body { padding: 0; background: none; }
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      height: 100% !important;
+      overflow: hidden !important;
+    }
     .receipt-container {
       border: 1.5px solid #000;
       box-shadow: none;
-      padding: 18px 22px;
-      page-break-inside: avoid;
+      padding: 14px 18px;
+      margin: 0 auto;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
     }
     .no-print { display: none !important; }
     table.items-table th { background: #2d1f6e !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
