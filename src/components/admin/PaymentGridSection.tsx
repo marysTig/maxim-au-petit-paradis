@@ -413,7 +413,6 @@ export function PaymentGridSection({ children, payments, onRecord, crecheSection
     <div class="info-box">
       <div class="info-title">Informations Enfant</div>
       <div class="info-row"><span class="info-label">Nom & Prénom :</span><span class="info-val">${child.lastName.toUpperCase()} ${child.firstName}</span></div>
-      <div class="info-row"><span class="info-label">Section :</span><span class="info-val">${child.section || "Non définie"}</span></div>
       <div class="info-row"><span class="info-label">Année scolaire :</span><span class="info-val">${schoolYear}–${schoolYear + 1}</span></div>
     </div>
     <div class="info-box">
