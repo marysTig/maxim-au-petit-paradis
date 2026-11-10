@@ -42,6 +42,23 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
+  // Si c'est un échec de chargement d'un chunk JS après déploiement, recharger automatiquement la page une fois
+  useEffect(() => {
+    const isChunkLoadFailed =
+      error instanceof Error &&
+      (error.message.includes("Failed to fetch dynamically imported module") ||
+       error.message.includes("Loading chunk") ||
+       error.message.includes("dynamically imported module"));
+
+    if (isChunkLoadFailed) {
+      const reloadKey = "chunk_failed_reloaded_" + window.location.pathname;
+      if (!sessionStorage.getItem(reloadKey)) {
+        sessionStorage.setItem(reloadKey, "1");
+        window.location.reload();
+      }
+    }
+  }, [error]);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
